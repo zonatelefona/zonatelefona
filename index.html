@@ -1,0 +1,77 @@
+import React from "react";
+        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          Prodaja, otkup i zamena mobilnih telefona u Rumi. Brzo, sigurno i po
+          najboljoj ceni.
+        </p>
+        <div className="flex justify-center gap-4">
+          <Button className="rounded-2xl px-6 py-3 text-lg">
+            Pogledaj ponudu
+          </Button>
+          <Button variant="outline" className="rounded-2xl px-6 py-3 text-lg">
+            Kontaktiraj nas
+          </Button>
+        </div>
+      </section>
+
+      {/* SERVICES */}
+      <section className="py-16 px-6 max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+        <Card className="rounded-2xl shadow-lg">
+          <CardContent className="p-6 text-center">
+            <Phone className="mx-auto mb-4" size={40} />
+            <h3 className="text-xl font-semibold mb-2">Prodaja telefona</h3>
+            <p className="text-gray-600">
+              Novi i polovni telefoni sa garancijom i proverom ispravnosti.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl shadow-lg">
+          <CardContent className="p-6 text-center">
+            <RefreshCcw className="mx-auto mb-4" size={40} />
+            <h3 className="text-xl font-semibold mb-2">Otkup i zamena</h3>
+            <p className="text-gray-600">
+              Nudimo fer procenu i mogućnost zamene uz doplatu.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl shadow-lg">
+          <CardContent className="p-6 text-center">
+            <ShieldCheck className="mx-auto mb-4" size={40} />
+            <h3 className="text-xl font-semibold mb-2">Sigurna kupovina</h3>
+            <p className="text-gray-600">
+              Svaki uređaj je testiran i spreman za korišćenje.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ABOUT */}
+      <section className="py-20 px-6 bg-gray-100 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Zašto baš mi?</h2>
+        <p className="max-w-3xl mx-auto text-gray-700 text-lg">
+          Zona Telefona je lokalni brend sa fokusom na kvalitet, poverenje i
+          zadovoljstvo kupaca. Naš cilj je da dobiješ najbolji telefon po
+          najboljoj ceni bez komplikacija.
+        </p>
+      </section>
+
+      {/* CONTACT */}
+      <section className="py-20 px-6 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Kontakt</h2>
+        <p className="text-lg text-gray-600 mb-4">
+          Instagram: @zona.telefona
+        </p>
+        <p className="text-lg text-gray-600 mb-8">Lokacija: Ruma, Srbija</p>
+        <Button className="rounded-2xl px-6 py-3 text-lg flex items-center gap-2 mx-auto">
+          <Instagram size={20} /> Zaprati nas
+        </Button>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-6 text-center text-gray-500 text-sm">
+        © {new Date().getFullYear()} Zona Telefona. Sva prava zadržana.
+      </footer>
+    </div>
+  );
+}
