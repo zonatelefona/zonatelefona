@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iPhone - Zona Telefona</title>
+<link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>iPhone Telefoni</h1>
+  <a href="index.html" class="back">← Nazad</a>
+</header>
+
+<section class="phones">
+  <div class="phone-card">
+    <img src="images/iphone12.jpg" alt="iPhone 12">
+    <h3>iPhone 12</h3>
+    <p class="price">Cena: 500€</p>
+    <button class="buy-btn">Kupi sada</button>
+  </div>
+  <div class="phone-card">
+    <img src="images/iphone13.jpg" alt="iPhone 13">
+    <h3>iPhone 13</h3>
+    <p class="price">Cena: 600€</p>
+    <button class="buy-btn">Kupi sada</button>
+  </div>
+  <!-- Dodaj koliko hoćeš telefona -->
+</section>
+
+<!-- Popup forma -->
+<div id="order-popup" class="popup">
+  <div class="popup-content">
+    <span class="close">&times;</span>
+    <h2>Naruči telefon</h2>
+    <form id="order-form">
+      <input type="text" name="ime" placeholder="Ime" required>
+      <input type="text" name="prezime" placeholder="Prezime" required>
+      <input type="text" name="adresa" placeholder="Adresa" required>
+      <input type="text" name="broj" placeholder="Broj telefona" required>
+      <input type="text" name="kuca" placeholder="Broj kuće" required>
+      <input type="text" name="postanski" placeholder="Poštanski broj" required>
+      <button type="submit">Pošalji narudžbinu</button>
+    </form>
+    <p id="order-success" style="display:none;">Hvala! Narudžbina je uspešno poslata.</p>
+  </div>
+</div>
+
+</body>
+</html>
