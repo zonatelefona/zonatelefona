@@ -1,77 +1,92 @@
-import React from "react";
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-          Prodaja, otkup i zamena mobilnih telefona u Rumi. Brzo, sigurno i po
-          najboljoj ceni.
-        </p>
-        <div className="flex justify-center gap-4">
-          <Button className="rounded-2xl px-6 py-3 text-lg">
-            Pogledaj ponudu
-          </Button>
-          <Button variant="outline" className="rounded-2xl px-6 py-3 text-lg">
-            Kontaktiraj nas
-          </Button>
-        </div>
-      </section>
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zona Telefona</title>
+<style>
+  body { margin:0; font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333;}
+  header { background: linear-gradient(90deg, #4f46e5, #3b82f6); color: white; padding: 50px 20px; text-align:center;}
+  header h1 { font-size: 3rem; margin-bottom: 10px;}
+  header p { font-size: 1.2rem; margin-bottom: 20px;}
+  header .buttons { display:flex; justify-content:center; gap:15px; flex-wrap:wrap;}
+  header .buttons a { padding: 12px 25px; border-radius:25px; background:white; color:#3b82f6; font-weight:bold; text-decoration:none; transition:0.3s;}
+  header .buttons a:hover { background:#e0e7ff;}
 
-      {/* SERVICES */}
-      <section className="py-16 px-6 max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
-        <Card className="rounded-2xl shadow-lg">
-          <CardContent className="p-6 text-center">
-            <Phone className="mx-auto mb-4" size={40} />
-            <h3 className="text-xl font-semibold mb-2">Prodaja telefona</h3>
-            <p className="text-gray-600">
-              Novi i polovni telefoni sa garancijom i proverom ispravnosti.
-            </p>
-          </CardContent>
-        </Card>
+  section { padding:60px 20px; max-width:1200px; margin:0 auto;}
+  h2 { text-align:center; font-size:2rem; margin-bottom:40px;}
 
-        <Card className="rounded-2xl shadow-lg">
-          <CardContent className="p-6 text-center">
-            <RefreshCcw className="mx-auto mb-4" size={40} />
-            <h3 className="text-xl font-semibold mb-2">Otkup i zamena</h3>
-            <p className="text-gray-600">
-              Nudimo fer procenu i mogućnost zamene uz doplatu.
-            </p>
-          </CardContent>
-        </Card>
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px;}
+  .card { background:white; padding:20px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); text-align:center;}
+  .card img { width:100%; border-radius:10px; margin-bottom:15px;}
+  .card h3 { margin-bottom:10px;}
+  .card p { margin-bottom:15px;}
+  .card a { text-decoration:none; background:#4f46e5; color:white; padding:10px 20px; border-radius:20px; display:inline-block; transition:0.3s;}
+  .card a:hover { background:#3b82f6;}
 
-        <Card className="rounded-2xl shadow-lg">
-          <CardContent className="p-6 text-center">
-            <ShieldCheck className="mx-auto mb-4" size={40} />
-            <h3 className="text-xl font-semibold mb-2">Sigurna kupovina</h3>
-            <p className="text-gray-600">
-              Svaki uređaj je testiran i spreman za korišćenje.
-            </p>
-          </CardContent>
-        </Card>
-      </section>
+  .contact { text-align:center;}
+  .contact a { display:inline-block; margin:10px; padding:10px 20px; background:#4f46e5; color:white; border-radius:20px; text-decoration:none; transition:0.3s;}
+  .contact a:hover { background:#3b82f6;}
 
-      {/* ABOUT */}
-      <section className="py-20 px-6 bg-gray-100 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">Zašto baš mi?</h2>
-        <p className="max-w-3xl mx-auto text-gray-700 text-lg">
-          Zona Telefona je lokalni brend sa fokusom na kvalitet, poverenje i
-          zadovoljstvo kupaca. Naš cilj je da dobiješ najbolji telefon po
-          najboljoj ceni bez komplikacija.
-        </p>
-      </section>
+  footer { text-align:center; padding:20px; background:#333; color:white;}
+</style>
+</head>
+<body>
 
-      {/* CONTACT */}
-      <section className="py-20 px-6 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">Kontakt</h2>
-        <p className="text-lg text-gray-600 mb-4">
-          Instagram: @zona.telefona
-        </p>
-        <p className="text-lg text-gray-600 mb-8">Lokacija: Ruma, Srbija</p>
-        <Button className="rounded-2xl px-6 py-3 text-lg flex items-center gap-2 mx-auto">
-          <Instagram size={20} /> Zaprati nas
-        </Button>
-      </section>
+<header>
+  <h1>Zona Telefona</h1>
+  <p>Prodaja, otkup i zamena mobilnih telefona u Rumi. Brzo, sigurno i po najboljoj ceni.</p>
+  <div class="buttons">
+    <a href="#prodaja">Pogledaj ponudu</a>
+    <a href="#contact">Kontaktiraj nas</a>
+  </div>
+</header>
 
-      {/* FOOTER */}
-      <footer className="py-6 text-center text-gray-500 text-sm">
-        © {new Date().getFullYear()} Zona Telefona. Sva prava zadržana.
-      </footer>
+<section id="prodaja">
+  <h2>Prodaja telefona</h2>
+  <div class="cards">
+    <div class="card">
+      <img src="images/iphone.jpg" alt="iPhone">
+      <h3>iPhone 12</h3>
+      <p>Od 500€</p>
+      <a href="#">Kupi sada</a>
     </div>
-  );
-}
+    <div class="card">
+      <img src="images/samsung.jpg" alt="Samsung">
+      <h3>Samsung S21</h3>
+      <p>Od 450€</p>
+      <a href="#">Kupi sada</a>
+    </div>
+    <div class="card">
+      <img src="images/xiaomi.jpg" alt="Xiaomi">
+      <h3>Xiaomi 12</h3>
+      <p>Od 400€</p>
+      <a href="#">Kupi sada</a>
+    </div>
+  </div>
+</section>
+
+<section id="otkup">
+  <h2>Otkup i zamena</h2>
+  <p style="text-align:center; max-width:700px; margin:0 auto;">Nudimo fer procenu i mogućnost zamene uz doplatu. Svi uređaji se testiraju i pripremaju za kupca.</p>
+</section>
+
+<section id="why">
+  <h2>Zašto izabrati nas?</h2>
+  <p style="text-align:center; max-width:700px; margin:0 auto;">Zona Telefona je lokalni brend sa fokusom na kvalitet, poverenje i zadovoljstvo kupaca.</p>
+</section>
+
+<section id="contact">
+  <h2>Kontakt</h2>
+  <div class="contact">
+    <a href="https://instagram.com/zona.telefona" target="_blank">Instagram</a>
+    <a href="#">Lokacija: Ruma, Srbija</a>
+  </div>
+</section>
+
+<footer>
+  © 2026 Zona Telefona. Sva prava zadržana.
+</footer>
+
+</body>
+</html>
