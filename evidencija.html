@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evidencija prodaje - Zona Telefona</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="evidencija.css">
+</head>
+<body>
+<header>
+  <h1>Evidencija prodaje</h1>
+  <p>Interna evidencija nabavke i prodaje telefona i punjača (podaci se čuvaju samo u ovom browseru).</p>
+</header>
+
+<section class="stats">
+  <div class="stat-card">
+    <span class="stat-label">Ukupno uloženo</span>
+    <span class="stat-value" id="stat-uloz">0,00 €</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Ukupno naplaćeno</span>
+    <span class="stat-value" id="stat-naplac">0,00 €</span>
+  </div>
+  <div class="stat-card profit">
+    <span class="stat-label">Ukupan profit</span>
+    <span class="stat-value" id="stat-profit">0,00 €</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Na stanju</span>
+    <span class="stat-value" id="stat-stanje">0</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Prodato</span>
+    <span class="stat-value" id="stat-prodato">0</span>
+  </div>
+</section>
+
+<section class="form-section">
+  <h2>Dodaj artikal</h2>
+  <form id="item-form">
+    <div class="form-row">
+      <label>
+        Tip
+        <select id="f-tip" required>
+          <option value="telefon">Telefon</option>
+          <option value="punjac">Punjač</option>
+        </select>
+      </label>
+      <label id="f-kategorija-wrap">
+        Kategorija punjača
+        <select id="f-kategorija">
+          <option value="iphone-adapter">iPhone adapter</option>
+          <option value="iphone-c-c">iPhone C na C punjač</option>
+          <option value="iphone-c-lightning">iPhone C na Lightning punjač</option>
+          <option value="samsung">Samsung punjač</option>
+          <option value="xiaomi">Xiaomi punjač</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>
+        Naziv / model
+        <input type="text" id="f-naziv" placeholder="npr. iPhone 12 128GB" required>
+      </label>
+      <label>
+        Datum nabavke
+        <input type="date" id="f-datum-nabavke" required>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>
+        Nabavna cena (€)
+        <input type="number" id="f-nabavna" step="0.01" min="0" required>
+      </label>
+      <label>
+        Prodajna cena (€)
+        <input type="number" id="f-prodajna" step="0.01" min="0">
+      </label>
+    </div>
+    <div class="form-row">
+      <label>
+        Status
+        <select id="f-status">
+          <option value="stanje">Na stanju</option>
+          <option value="prodato">Prodato</option>
+        </select>
+      </label>
+      <label id="f-datum-prodaje-wrap">
+        Datum prodaje
+        <input type="date" id="f-datum-prodaje">
+      </label>
+    </div>
+    <button type="submit">Dodaj artikal</button>
+  </form>
+</section>
+
+<section class="table-section">
+  <div class="table-header">
+    <h2>Svi artikli</h2>
+    <div class="filters">
+      <select id="filter-tip">
+        <option value="">Svi tipovi</option>
+        <option value="telefon">Telefon</option>
+        <option value="punjac">Punjač</option>
+      </select>
+      <select id="filter-kategorija">
+        <option value="">Sve kategorije</option>
+        <option value="iphone-adapter">iPhone adapter</option>
+        <option value="iphone-c-c">iPhone C na C</option>
+        <option value="iphone-c-lightning">iPhone C na Lightning</option>
+        <option value="samsung">Samsung punjač</option>
+        <option value="xiaomi">Xiaomi punjač</option>
+      </select>
+      <select id="filter-status">
+        <option value="">Svi statusi</option>
+        <option value="stanje">Na stanju</option>
+        <option value="prodato">Prodato</option>
+      </select>
+      <button id="export-csv" type="button">Izvezi CSV</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="items-table">
+      <thead>
+        <tr>
+          <th>Tip</th>
+          <th>Kategorija</th>
+          <th>Naziv</th>
+          <th>Nabavljeno</th>
+          <th>Prodato</th>
+          <th>Nabavna</th>
+          <th>Prodajna</th>
+          <th>Profit</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="items-body"></tbody>
+    </table>
+    <p id="empty-msg" style="display:none;">Nema unetih artikala.</p>
+  </div>
+
+  <div class="category-summary">
+    <h3>Profit po kategoriji</h3>
+    <table id="category-table">
+      <thead>
+        <tr><th>Kategorija</th><th>Prodato komada</th><th>Ukupan profit</th></tr>
+      </thead>
+      <tbody id="category-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<script src="evidencija.js" defer></script>
+</body>
+</html>

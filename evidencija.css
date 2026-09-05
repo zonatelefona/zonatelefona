@@ -1,0 +1,36 @@
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:20px; padding:40px 40px 0; max-width:1200px; margin:0 auto; }
+.stat-card { background:white; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); padding:20px; text-align:center; }
+.stat-card.profit { background:#eef2ff; }
+.stat-label { display:block; font-size:0.85rem; color:#666; margin-bottom:8px; }
+.stat-value { display:block; font-size:1.4rem; font-weight:bold; color:#4f46e5; }
+
+.form-section, .table-section { max-width:1200px; margin:20px auto; padding:0 40px; }
+.form-section h2, .table-section h2 { margin-bottom:10px; }
+
+#item-form { background:white; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); padding:20px; }
+.form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; margin-bottom:15px; }
+.form-row label { display:flex; flex-direction:column; font-size:0.9rem; color:#555; gap:5px; }
+.form-row input, .form-row select { padding:10px; border-radius:10px; border:1px solid #ccc; font-size:1rem; }
+#item-form button { background:#4f46e5; color:white; border:none; padding:12px 24px; border-radius:20px; cursor:pointer; font-size:1rem; transition:0.3s; }
+#item-form button:hover { background:#3b82f6; }
+
+.table-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+.filters { display:flex; flex-wrap:wrap; gap:10px; }
+.filters select, .filters button { padding:8px 12px; border-radius:10px; border:1px solid #ccc; font-size:0.9rem; }
+.filters button { background:#4f46e5; color:white; border:none; cursor:pointer; transition:0.3s; }
+.filters button:hover { background:#3b82f6; }
+
+.table-wrap { overflow-x:auto; background:white; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.1); padding:10px; }
+table { width:100%; border-collapse:collapse; min-width:820px; }
+th, td { text-align:left; padding:10px 12px; border-bottom:1px solid #eee; font-size:0.9rem; white-space:nowrap; }
+th { color:#555; }
+.profit-positive { color:#16a34a; font-weight:bold; }
+.profit-negative { color:#dc2626; font-weight:bold; }
+.status-badge { padding:4px 10px; border-radius:12px; font-size:0.8rem; }
+.status-badge.stanje { background:#fef3c7; color:#92400e; }
+.status-badge.prodato { background:#dcfce7; color:#166534; }
+.delete-btn { background:none; border:none; color:#dc2626; cursor:pointer; font-size:1rem; }
+#empty-msg { text-align:center; padding:20px; color:#888; }
+
+.category-summary { max-width:600px; margin-top:20px; }
+.category-summary table { min-width:auto; }
