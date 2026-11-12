@@ -375,7 +375,7 @@ function setTime(t) {
     const proj = (i, y) => { const v = new THREE.Vector3(P[i].position.x, y, 0).project(camera); return [(v.x * .5 + .5) * W, (-v.y * .5 + .5) * H]; };
     cam(cp, ct);   // for projection
     [['bd1', 2, 14.3, h1], ['bd2', 3, 14.6, h2]].forEach(([id, i, t0, hl]) => {
-      if (t < t0) return; const el = $(id); show(el); const [x, y] = proj(i, -.9);
+      if (t < t0) return; const el = $(id); show(el); const [x, y] = proj(i, -.5);
       el.style.left = x.toFixed(1) + 'px'; el.style.top = y.toFixed(1) + 'px';
       const b = eOutBack(prog(t, t0, t0 + .45)); style(el, merge({ op: clamp(prog(t, t0, t0 + .12)), s: lerp(.2, 1, b) * (1 + .18 * hl) }, outBlur(t, 17.6, .35)));
     });
