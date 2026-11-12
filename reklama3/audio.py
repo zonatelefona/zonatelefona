@@ -6,7 +6,7 @@ import sys, wave
 import numpy as np
 
 SR = 48000
-DUR = 28.0
+DUR = 30.0
 N = int(SR * DUR)
 rng = np.random.default_rng(777)
 BEAT = 0.5
@@ -193,8 +193,8 @@ def line_riser(length):
 
 # ------------------------------------------------------------------ harmony (E minor, 120 BPM)
 Em = (28, [52, 55, 59, 62, 66]); C = (24, [48, 52, 55, 59, 64]); Am = (33, [57, 60, 64, 67, 71]); Bm = (35, [54, 59, 62, 66, 69])
-chords = [(0, 3, Em), (3, 5, C), (5, 7, Bm), (7, 9, Em), (9, 11, C), (11, 13, Am), (13, 15, Bm), (15, 17, Em),
-          (17, 19, C), (19, 21, Bm), (21, 28, Em)]
+chords = [(0, 3, Em), (3, 5, C), (5, 7, Bm), (7, 9, Em), (9, 11, C), (11, 13, Am), (13, 15, Bm), (15, 17, C), (17, 19, Em),
+          (19, 21, C), (21, 23, Bm), (23, 30, Em)]
 ARP = {id(Em): [64, 67, 71, 74, 76, 74, 71, 67], id(C): [64, 67, 72, 76, 79, 76, 72, 67], id(Am): [64, 69, 72, 76, 81, 76, 72, 69], id(Bm): [66, 69, 71, 74, 78, 74, 71, 69]}
 tt = np.arange(N) / SR
 
@@ -203,19 +203,19 @@ padL = np.zeros(N); padR = np.zeros(N)
 for (a, b, (root, notes)) in chords:
     st = max(0.0, a - 0.05); ln = (b - st) + 0.8; t = T(ln)
     ev = np.minimum(1, t / 0.3) * np.where(t > (b - st), np.exp(-(t - (b - st)) / 0.25), 1)
-    if a >= 21: ev = np.minimum(1, t / 0.01) * np.exp(-t / 3.2) * 1.2
+    if a >= 23: ev = np.minimum(1, t / 0.01) * np.exp(-t / 3.2) * 1.2
     for k, m in enumerate(notes):
         s = supersaw(m, ln, 5, 0.12) * ev * 0.09; pan = -0.6 if k % 2 == 0 else 0.6
         place(padL, s * np.cos((pan + 1) * np.pi / 4), st); place(padR, s * np.sin((pan + 1) * np.pi / 4), st)
 def pad_cut(x):
     if x < 1.0: return 220
     if x < 7: return 500 + 900 * (x - 1) / 6
-    if x < 19: return 2000
-    if x < 20.3: return 1200
-    if x < 21: return 1200 * (7 ** ((x - 20.3) / .7))
-    return max(900, 5500 * np.exp(-(x - 21) / 2.4))
+    if x < 21: return 2000
+    if x < 22.3: return 1200
+    if x < 23: return 1200 * (7 ** ((x - 22.3) / .7))
+    return max(900, 5500 * np.exp(-(x - 23) / 2.4))
 padL = tvfilt(padL, pad_cut, 'lp'); padR = tvfilt(padR, pad_cut, 'lp')
-pe = np.clip((tt - 0.15) / 0.8, 0, 1); pe[(tt >= 20.94) & (tt < 21.0)] = 0
+pe = np.clip((tt - 0.15) / 0.8, 0, 1); pe[(tt >= 22.94) & (tt < 23.0)] = 0
 musL += padL * pe; musR += padR * pe; revS += (padL + padR) * pe * 0.2
 
 def root_at(x):
@@ -223,12 +223,12 @@ def root_at(x):
         if a <= x < b: return ch[0]
     return 28
 # 808 groove 7.0 -> 19.0
-for i in range(int((19.0 - 7.0) / 0.25)):
+for i in range(int((21.0 - 7.0) / 0.25)):
     x = 7.0 + i * 0.25
     if [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0][i % 16]: add(b808(root_at(x) + 12, 0.7, 0.3), x, 0.5, music=True)
 for x in (3.5, 4.5, 5.5, 6.0): add(b808(root_at(x) + 12, 1.0, 0.5), x, 0.55, music=True)
-for x in (19.0, 19.5, 20.0): add(b808(35 + 12, 0.6, 0.35), x, 0.45, music=True)
-add(b808(40, 4.0, 1.8), 21.0, 0.85, music=True)
+for x in (21.0, 21.5, 22.0): add(b808(35 + 12, 0.6, 0.35), x, 0.45, music=True)
+add(b808(40, 4.0, 1.8), 23.0, 0.85, music=True)
 t = T(2.0); add(lp(np.tanh(1.4 * np.sin(2 * np.pi * mtof(40) * t)) * np.minimum(1, t / .05) * np.minimum(1, (2 - t) / .3), 260), 1.0, 0.28, music=True)
 
 # ARP
@@ -236,33 +236,34 @@ for (a, b, ch) in chords:
     seq = ARP[id(ch)]
     for i in range(int((b - a) / 0.125)):
         x = a + i * 0.125
-        if x < 7.0 or (20.94 <= x < 21.0) or x > 26.2 or (19.0 <= x < 20.3 and i % 2): continue
-        g = 0.26 if x < 19 else 0.2 if x < 20.3 else 0.36 if x < 21 else 0.24 * np.exp(-(x - 21) / 2.0)
-        br = 3600 if x < 19 else 1800 if x < 20.3 else 2500 + 6000 * (x - 20.3) if x < 21 else 3000
+        if x < 7.0 or (22.94 <= x < 23.0) or x > 28.2 or (21.0 <= x < 22.3 and i % 2): continue
+        g = 0.26 if x < 21 else 0.2 if x < 22.3 else 0.36 if x < 23 else 0.24 * np.exp(-(x - 23) / 2.0)
+        br = 3600 if x < 21 else 1800 if x < 22.3 else 2500 + 6000 * (x - 22.3) if x < 23 else 3000
         add(pluck(seq[i % 8], 0.4, br), x, g * (1 if i % 4 == 0 else .7), pan=.4 * np.sin(i * .9), rev=.2, dly=.4, music=True)
 
 # DRUMS
 K = kick(1.1, 0.6, 45); CL = clap()
 def kick_at(x, g=1.0): add(K, x, g); place(duck, -0.7 * np.exp(-T(0.4) / 0.11), x)
 for x in (3.5, 4.5, 5.0, 5.5, 6.0): kick_at(x, 0.85)
-for i in range(int((19.0 - 7.0) / BEAT)):
+for i in range(int((21.0 - 7.0) / BEAT)):
     x = 7.0 + i * BEAT; kick_at(x)
     if i % 2 == 1: add(CL, x, 0.55, rev=.35); add(snare(), x, 0.3, rev=.2)
     add(hat(0.03), x + 0.25, 0.45, pan=.3)
     if x >= 11: add(hat(0.015), x + 0.125, 0.22, pan=-.3); add(hat(0.015), x + 0.375, 0.22, pan=-.3)
 for x in (4.0, 5.0, 6.0, 6.5): add(CL, x, .45, rev=.4)
-for x in (19.0, 19.5, 20.0): kick_at(x, .9)
-x = 20.3
-while x < 20.92:
-    k = (x - 20.3) / .62; add(snare(), x, .3 + .55 * k ** 1.3, rev=.3); x += 0.125 if k < .4 else 0.0625 if k < .75 else 0.03125
+for x in (21.0, 21.5, 22.0): kick_at(x, .9)
+x = 22.3
+while x < 22.92:
+    k = (x - 22.3) / .62; add(snare(), x, .3 + .55 * k ** 1.3, rev=.3); x += 0.125 if k < .4 else 0.0625 if k < .75 else 0.03125
 
 # ------------------------------------------------------------------ SOUND DESIGN (visual sync)
 add(line_riser(0.85), 0.15, 0.9, rev=.3)                       # line grows
-add(line_riser(0.7), 20.3, 1.0, rev=.4)                         # collapse build
-add(line_riser(0.25), 20.75, .6, rev=.3)
-HITS = [(1.0, 1.2, 52), (3.5, .9, 48), (7.0, .7, None), (7.75, .7, None), (8.5, 1.1, 52), (12.7, .8, None), (13.0, .5, None), (13.5, .5, None),
-        (14.0, .7, None), (14.5, .8, 57), (16.0, .6, None), (16.75, 1.1, 55), (17.5, .8, None), (19.0, .5, None), (19.5, .5, None), (20.0, .6, None),
-        (21.0, 1.6, 40), (22.0, .6, None), (22.5, .4, None)]
+add(line_riser(0.7), 22.3, 1.0, rev=.4)                         # collapse build
+add(line_riser(0.25), 22.75, .6, rev=.3)
+HITS = [(1.0, 1.2, 52), (3.5, .9, 48), (7.0, .7, None), (7.75, .7, None), (8.5, 1.1, 52), (12.7, .8, None),
+        (13.0, 1.0, 45), (14.0, 1.0, 47), (15.0, 1.2, 52), (16.0, .9, 57), (16.5, 1.0, None),          # boxes + headline (slower, harder)
+        (18.0, .6, None), (18.75, 1.1, 55), (19.5, .8, None), (21.0, .5, None), (21.5, .5, None), (22.0, .6, None),
+        (23.0, 1.6, 40), (24.0, .6, None), (24.5, .4, None)]
 for (x, s, note) in HITS:
     add(boom(1.8 if s > .9 else 1.0, 85, 30, .35 + .45 * s, .7), x, .45 * s + .15, rev=.45)
     add(hp(noise(int(.25 * SR)), 2800) * np.exp(-T(.25) / .04) * .3, x, .45 * s, rev=.4)
@@ -272,27 +273,28 @@ for (x, s, note) in HITS:
 # ring pulse + confirm
 add(shimmer(1.5), 12.7, .7, rev=.5); add(bell(88, 1.2, .5), 12.7, .3, rev=.5)
 # glitches
-for x in (2.45, 15.5, 18.85): add(glitch_sfx(0.42), x, 1.0, pan=np.linspace(-.5, .5, int(.42 * SR)), rev=.2)
+for x in (2.45, 17.5, 20.85): add(glitch_sfx(0.42), x, 1.0, pan=np.linspace(-.5, .5, int(.42 * SR)), rev=.2)
 # whips
-for x, d, p in ((6.45, .45, -1), (10.4, .45, 1), (15.95, .5, 1)):
+for x, d, p in ((6.45, .45, -1), (10.4, .45, 1), (17.95, .5, 1)):
     add(whoosh(d + .1, 300, 6000, .8, 1.1), x - .05, .9, pan=np.linspace(-p * .2, p * .9, int((d + .1) * SR)), rev=.25)
 add(whoosh(.6, 200, 3500, .85, 1.2), 2.95, .7, rev=.3)          # grid in
 # typing
-for (t0, txt, cps) in ((4.45, 'otkup polovnih telefona', 24), (11.3, 'Koliko vredi moj telefon?', 21), (23.5, 'zaprati: @zona.telefona', 22)):
+for (t0, txt, cps) in ((4.45, 'otkup polovnih telefona', 24), (11.3, 'Koliko vredi moj telefon?', 21), (25.5, 'zaprati: @zona.telefona', 22)):
     for i, ch in enumerate(txt):
         if ch != ' ': add(key_click(), t0 + i / cps, .55, pan=rng.uniform(-.3, .3))
 add(blip(88, 95), 12.6, .6, rev=.4)
 # boxes / connectors
-for x in (13.25, 13.75): add(blip(81, 86, .04), x, .45, rev=.3)
+for x in (13.5, 14.5): add(blip(81, 86, .04), x, .45, rev=.3)
+for x in (13.0, 14.0, 15.0): add(metal(1.2, 587.3, .5), x, .35, rev=.5)
 # phone draw-ons
-for x in (3.0, 19.0, 19.5, 20.0): add(tvfilt(noise(int(.5 * SR)), lambda z: 3000 + 6000 * z * 2, 'bp', .5) * np.exp(-T(.5) / .15) * .3, x, .7, rev=.3)
+for x in (3.0, 21.0, 21.5, 22.0): add(tvfilt(noise(int(.5 * SR)), lambda z: 3000 + 6000 * z * 2, 'bp', .5) * np.exp(-T(.5) / .15) * .3, x, .7, rev=.3)
 # final
-add(boom(5.0, 100, 24, 2.0, 1.5), 21.0, 1.0, rev=.8)
-add(metal(4.0, 329.6, 1.8), 21.0, .6, rev=.8)
-add(shimmer(4.5), 21.05, 1.1, rev=.8, dly=.3)
-for m in (40, 52, 59, 64, 71, 76): add(bell(m, 4.5, 2.0), 21.0, .38 if m > 50 else .28, pan=(m - 64) / 24, rev=.7)
-add(downer(1.2), 26.8, .6, rev=.6)                               # collapse
-add(bell(88, 1.4, .8), 27.15, .35, rev=.8, dly=.4); add(shimmer(1.0), 27.15, .4, rev=.7)
+add(boom(5.0, 100, 24, 2.0, 1.5), 23.0, 1.0, rev=.8)
+add(metal(4.0, 329.6, 1.8), 23.0, .6, rev=.8)
+add(shimmer(4.5), 23.05, 1.1, rev=.8, dly=.3)
+for m in (40, 52, 59, 64, 71, 76): add(bell(m, 4.5, 2.0), 23.0, .38 if m > 50 else .28, pan=(m - 64) / 24, rev=.7)
+add(downer(1.2), 28.8, .6, rev=.6)                               # collapse
+add(bell(88, 1.4, .8), 29.15, .35, rev=.8, dly=.4); add(shimmer(1.0), 29.15, .4, rev=.7)
 
 # ------------------------------------------------------------------ mix
 duck = np.clip(duck, 0.22, 1); musL *= duck; musR *= duck
@@ -314,7 +316,7 @@ L = hp(L, 30); R = hp(R, 30)
 L = L + hp(L, 2500) * .25; R = R + hp(R, 2500) * .25
 m = max(np.max(np.abs(L)), np.max(np.abs(R))); L /= m; R /= m
 drive = 2.4; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
-fade = np.ones(N); sel = tt > 27.3; fade[sel] = np.cos(np.clip((tt[sel] - 27.3) / .7, 0, 1) * np.pi / 2) ** 2
+fade = np.ones(N); sel = tt > 29.3; fade[sel] = np.cos(np.clip((tt[sel] - 29.3) / .7, 0, 1) * np.pi / 2) ** 2
 fade[:200] = np.linspace(0, 1, 200); L *= fade; R *= fade
 pk = max(np.max(np.abs(L)), np.max(np.abs(R))); L *= .89 / pk; R *= .89 / pk
 out = np.stack([L, R], 1)

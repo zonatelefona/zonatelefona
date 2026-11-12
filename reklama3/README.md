@@ -7,8 +7,8 @@ Stil prema referenci: skoro crna pozadina, narandžasti sjaj ispod teksta, svetl
 | 0–3 s | Linija se širi → **IMAŠ / TELEFON?** → glitch |
 | 3–7 s | Wireframe telefon na mreži + paneli → **KUPUJEMO!** · `› otkup polovnih telefona` |
 | 7–11 s | **PRODAJ. / ZAMENI. / KUPI.** → whip blur |
-| 11–16 s | `› Koliko vredi moj telefon?` → ring → 01 TELEFON → 02 PROCENA → 03 FER CENA → **BRZA PROCENA. FER CENA.** |
-| 16–21 s | **TVOJ SLEDEĆI / TELEFON / JE OVDE.** → glitch → **SVI BRENDOVI.** (iPhone · Samsung · Xiaomi) |
-| 21–28 s | **ZONA TELEFONA** · KUPOVINA • OTKUP • ZAMENA · RUMA · `› zaprati: @zona.telefona` → tačka svetla |
+| 11–18 s | `› Koliko vredi moj telefon?` → ring → 01 TELEFON → 02 PROCENA → 03 FER CENA → **BRZA PROCENA. FER CENA.** |
+| 18–23 s | **TVOJ SLEDEĆI / TELEFON / JE OVDE.** → glitch → **SVI BRENDOVI.** (iPhone · Samsung · Xiaomi) |
+| 23–30 s | **ZONA TELEFONA** · KUPOVINA • OTKUP • ZAMENA · RUMA · `› zaprati: @zona.telefona` → tačka svetla |
 
 Render: `./render.sh` → `build/ZONA_TELEFONA_v3_1080x1920_30fps.mp4`

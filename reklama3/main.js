@@ -3,7 +3,7 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
-const W = 1080, H = 1920, DURATION = 28;
+const W = 1080, H = 1920, DURATION = 30;
 // ---------- math ----------
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const prog = (t, a, b) => clamp((t - a) / (b - a));
@@ -18,9 +18,12 @@ const pulse = (t, t0, att, dec) => t < t0 - att ? 0 : t < t0 ? Math.pow((t - (t0
 const hash = n => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // HITS — identical timestamps are used in audio.py
-const HITS = [[1.0, 1.2], [3.5, .9], [7.0, .7], [7.75, .7], [8.5, 1.1], [12.7, .8], [13.0, .5], [13.5, .5], [14.0, .7], [14.5, .8],
-  [16.0, .6], [16.75, 1.1], [17.5, .8], [19.0, .5], [19.5, .5], [20.0, .6], [21.0, 1.6], [22.0, .6], [22.5, .4]];
-const SPARKS = [[1.0, 540, 960, .8], [8.5, 540, 1090, 1], [16.75, 540, 920, .8], [17.5, 540, 1130, .7], [21.0, 540, 840, 1.4]];
+// real-time hits up to 18 s (scene 4 extended by one bar), logical-time hits after (real = logical + 2)
+const HITS_A = [[1.0, 1.2], [3.5, .9], [7.0, .7], [7.75, .7], [8.5, 1.1], [12.7, .8], [13.0, 1.0], [14.0, 1.0], [15.0, 1.2], [16.0, .9], [16.5, 1.0]];
+const HITS_B = [[16.0, .6], [16.75, 1.1], [17.5, .8], [19.0, .5], [19.5, .5], [20.0, .6], [21.0, 1.6], [22.0, .6], [22.5, .4]];
+const SPARKS_A = [[1.0, 540, 960, .8], [8.5, 540, 1090, 1], [13.0, 540, 705, .55], [14.0, 540, 925, .55], [15.0, 540, 1145, .75], [16.5, 540, 1440, .6]];
+const SPARKS_B = [[16.75, 540, 920, .8], [17.5, 540, 1130, .7], [21.0, 540, 840, 1.4]];
+const EXT = 2.0;
 
 // ---------- three: wireframe phones + grid ----------
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -176,11 +179,12 @@ function boxOpen(el, t, t0, dur = .4) { const p = eOutExpo(prog(t, t0, t0 + dur)
 // ---------- 2D FX canvas: sparks + grain ----------
 const fx = $('fx').getContext('2d');
 const grains = [0, 1, 2, 3].map(k => { const c = document.createElement('canvas'); c.width = 540; c.height = 960; const x = c.getContext('2d'); const d = x.createImageData(540, 960); for (let i = 0; i < d.data.length; i += 4) { const v = hash(i * .013 + k * 91.7) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); return c; });
-function drawFX(t) {
+function drawFX(tr) {
+  const SPARKS = tr < 18 ? SPARKS_A : SPARKS_B; const ts = tr < 18 ? tr : tr - EXT; const t = tr;
   fx.clearRect(0, 0, W, H);
   fx.globalCompositeOperation = 'lighter';
   for (const [t0, cx, cy, s] of SPARKS) {
-    const dt = t - t0; if (dt < 0 || dt > 1.6) continue;
+    const dt = ts - t0; if (dt < 0 || dt > 1.6) continue;
     const n = Math.round(150 * s);
     for (let i = 0; i < n; i++) {
       const a = hash(i * 1.7 + t0) * Math.PI * 2, sp = (300 + hash(i * 2.9 + t0) * 1100) * s;
@@ -206,8 +210,9 @@ const pad4 = v => String(Math.round(Math.abs(v))).padStart(4, '0');
 
 // ================= TIMELINE =================
 function setTime(t) {
+  const tr = t; const inS4 = tr >= 11 && tr < 18; if (tr >= 18) t = tr - EXT;
   for (const el of content.children) show(el, false);
-  for (const id of ['b1', 'b2', 'b3', 'c1', 'c2']) show($(id), false);
+  for (const id of ['b1', 'b2', 'b3', 'c1', 'c2', 'k1', 'k2', 'k3']) show($(id), false);
   phones.forEach(p => p.visible = false); grid.visible = false;
   let glow = 0, glowY = 960, glowS = 1, glowB = 0, shakeAmt = 0, kadar = 1, hudOp = clamp(t / .4) * (1 - prog(t, 26.6, 27.0));
   let camPos = [0, .9, 8.4], camT = [0, -.15, 0];
@@ -261,27 +266,41 @@ function setTime(t) {
     style(s3, { x: w.x, op: w.op, sx: w.sx, s: 1 + .025 * prog(t, 7, 10.4), mb: 3 });
     glow = .5 + .25 * prog(t, 7, 8.5) + .5 * pulse(t, 8.5, .02, .6); glow *= 1 - prog(t, 10.45, 10.85); glowY = 1100; glowS = 1.2;
   }
-  // ===== S4 11–16 : prompt → boxes → BRZA PROCENA. FER CENA. =====
-  else if (t < 16.0) {
+  // ===== S4 11–18 (real time) : prompt → boxes (impact) → BRZA PROCENA. FER CENA. =====
+  else if (inS4) {
     kadar = 4;
-    const gOut = outBlur(t, 15.5, .35);
+    const gOut = outBlur(t, 17.5, .35);
     const pr = $('s4p'); show(pr); typeText('s4p', t, 11.3, 'Koliko vredi moj telefon?', 21);
     const pc = t > 12.65 ? .35 * pulse(t, 12.7, .02, .25) : 0;
     style(pr, merge(boxOpen(pr, t, 11.0, .45), gOut, { s: 1 + pc * .1 }));
     pr.style.borderColor = t > 12.7 ? 'rgba(255,122,26,.95)' : '';
-    // ring pulse
     if (t > 12.7 && t < 13.5) { const r = $('ring'); show(r); const e = eOutCubic(prog(t, 12.7, 13.4)); const dd = lerp(40, 1100, e); r.style.width = r.style.height = dd.toFixed(1) + 'px'; r.style.left = (540 - dd / 2).toFixed(1) + 'px'; r.style.top = (476 - dd / 2).toFixed(1) + 'px'; r.style.opacity = ((1 - e) * 1.2).toFixed(3); r.style.borderWidth = lerp(7, 1.5, e).toFixed(2) + 'px'; }
-    // boxes
+    // boxes: SLAM in (scale-down + blur + orange flash fill + shock outline)
     const bx = $('boxes'); show(bx);
-    [['b1', 13.0], ['b2', 13.5], ['b3', 14.0]].forEach(([id, t0]) => { const el = $(id); el.style.visibility = t >= t0 ? 'visible' : 'hidden'; const b = boxOpen(el, t, t0, .4); const tx = blurIn(el, t, t0 + .08, .45, { s0: 1, blur: 10 }); style(el, merge(b, { op: tx.op })); });
-    [['c1', 13.25], ['c2', 13.75]].forEach(([id, t0]) => { const el = $(id); el.style.visibility = t >= t0 ? 'visible' : 'hidden'; el.style.transform = `scaleY(${eOutExpo(prog(t, t0, t0 + .3)).toFixed(3)})`; });
+    [['b1', 'k1', 13.0], ['b2', 'k2', 14.0], ['b3', 'k3', 15.0]].forEach(([id, kid, t0], i) => {
+      const el = $(id), k = $(kid); const on = t >= t0; el.style.visibility = on ? 'visible' : 'hidden'; if (!on) return;
+      const p = eOutExpo(prog(t, t0, t0 + .32));
+      const fl = pulse(t, t0 + .03, .02, .22);
+      style(el, { op: clamp(p * 4), s: lerp(1.7, 1, p), blur: (1 - p) * 16 });
+      el.style.backgroundColor = `rgba(${Math.round(lerp(14, 255, fl * .8))},${Math.round(lerp(9, 110, fl * .8))},${Math.round(lerp(5, 20, fl * .8))},${(.6 + .3 * fl).toFixed(3)})`;
+      el.style.borderColor = fl > .02 || i === 2 ? 'rgba(255,122,26,1)' : '';
+      el.style.boxShadow = `0 0 ${Math.round(20 + 90 * fl)}px rgba(255,100,0,${(.15 + .7 * fl).toFixed(3)})${i === 2 ? ',inset 0 0 30px rgba(255,100,0,.12)' : ''}`;
+      const ke = eOutCubic(prog(t, t0 + .02, t0 + .6));
+      if (ke < 1) { k.style.visibility = 'visible'; style(k, { s: lerp(1, 1.5, ke), sy: lerp(1, 1.5, ke), op: (1 - ke) * 1.2 }); }
+    });
+    [['c1', 13.5], ['c2', 14.5]].forEach(([id, t0]) => { const el = $(id); el.style.visibility = t >= t0 ? 'visible' : 'hidden'; el.style.transform = `scaleY(${eOutCubic(prog(t, t0, t0 + .45)).toFixed(3)})`; });
     style(bx, gOut);
-    // headline
+    // headline: slower, each line slams separately
     const hh = $('s4h');
-    if (t < 15.5) { show(hh); hideGlitch('s4h'); const a = blurIn(hh, t, 14.5, .55, { s0: 1.2, blur: 22 }); style(hh, a); hh.children[1].style.opacity = clamp(prog(t, 14.75, 14.95)); }
-    else glitch('s4h', t, 15.5, .4, 'out');
-    glow = .45 * clamp(prog(t, 11, 11.5)) + .4 * pulse(t, 12.7, .02, .5) + .35 * clamp(prog(t, 14.5, 14.8)); glow *= 1 - prog(t, 15.5, 15.9);
-    glowY = t < 13 ? 470 : 1350; glowS = t < 13 ? .9 : 1.1;
+    if (t < 17.5) {
+      show(hh); hideGlitch('s4h');
+      const a = blurIn(hh, t, 16.0, .8, { s0: 1.35, blur: 26 }); style(hh, { op: a.op, blur: a.blur, s: 1 + .02 * prog(t, 16.8, 17.5) });
+      hh.children[0].style.transform = `scale(${lerp(1.35, 1, a.p).toFixed(4)})`; hh.children[0].style.letterSpacing = lerp(.12, -.01, a.p).toFixed(4) + 'em';
+      const p2 = eOutExpo(prog(t, 16.5, 16.85));
+      const f2 = hh.children[1]; f2.style.opacity = clamp(p2 * 3).toFixed(3); f2.style.transform = `scale(${lerp(1.6, 1, p2).toFixed(4)})`;
+    } else glitch('s4h', t, 17.5, .4, 'out');
+    glow = .45 * clamp(prog(t, 11, 11.5)) + .4 * pulse(t, 12.7, .02, .5) + .35 * clamp(prog(t, 16.0, 16.4)); glow *= 1 - prog(t, 17.5, 17.9);
+    glowY = t < 13 ? 470 : t < 16 ? 900 : 1350; glowS = t < 13 ? .9 : t < 16 ? 1.1 : 1.1;
   }
   // ===== S5 16–21 : TVOJ SLEDEĆI / TELEFON / JE OVDE.  → SVI BRENDOVI =====
   else if (t < 21.0) {
@@ -330,7 +349,7 @@ function setTime(t) {
 
   // ---- hits: flash / shake / glow pulse ----
   let flash = 0;
-  for (const [ti, s] of HITS) { flash += s * .16 * pulse(t, ti, .012, .12); shakeAmt += s * pulse(t, ti, .01, .16); glowB += s * .35 * pulse(t, ti, .01, .35); }
+  for (const [ti, s] of (tr < 18 ? HITS_A : HITS_B)) { flash += s * .16 * pulse(t, ti, .012, .12); shakeAmt += s * pulse(t, ti, .01, .16); glowB += s * .35 * pulse(t, ti, .01, .35); }
   flash += .55 * pulse(t, 20.98, .06, .3);
   $('flash').style.opacity = Math.min(.8, flash).toFixed(3);
   const sh = shakeAmt * 9;
@@ -340,12 +359,12 @@ function setTime(t) {
   gB.style.opacity = clamp(glowB * .8).toFixed(3); gB.style.top = glowY + 'px'; gB.style.transform = `scale(${(glowS * .55).toFixed(3)},${(glowS * .35).toFixed(3)})`;
   // HUD
   $('hud').style.opacity = hudOp.toFixed(3);
-  const fr = Math.floor(t * 30); $('hudT').textContent = `00:00:${String(Math.floor(t)).padStart(2, '0')}:${String(fr % 30).padStart(2, '0')}`;
+  const fr = Math.floor(tr * 30); $('hudT').textContent = `00:00:${String(Math.floor(tr)).padStart(2, '0')}:${String(fr % 30).padStart(2, '0')}`;
   $('hudB').textContent = `KADAR 0${kadar} / 06`;
   // three
   camera.position.set(...camPos); camera.lookAt(...camT);
   renderer.render(scene, camera);
-  drawFX(t);
+  drawFX(tr);
 }
 
 async function boot() {

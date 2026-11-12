@@ -8,7 +8,7 @@ const req = createRequire(import.meta.url);
 let chromium; try { ({ chromium } = req('playwright')); } catch { ({ chromium } = req('/opt/node-tools/node_modules/playwright')); }
 
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
-const [, , outDir = 'frames', fpsS = '60', startS = '0', endS = '28', workersS = '1', timesArg] = process.argv;
+const [, , outDir = 'frames', fpsS = '60', startS = '0', endS = '30', workersS = '1', timesArg] = process.argv;
 const fps = +fpsS, workers = +workersS;
 fs.mkdirSync(outDir, { recursive: true });
 

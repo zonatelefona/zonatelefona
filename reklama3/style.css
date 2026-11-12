@@ -74,3 +74,5 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
 .hb{position:absolute;left:112px;bottom:158px;font-size:22px;letter-spacing:.08em}
 .hbr{position:absolute;right:112px;bottom:158px;font-size:22px;letter-spacing:.06em;color:var(--org)}
 #flash{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,200,150,.9),rgba(255,110,20,.5) 50%,rgba(0,0,0,0) 85%);opacity:0;mix-blend-mode:screen}
+
+.bshock{position:absolute;left:230px;width:620px;height:150px;border:3px solid #ff8a2a;box-shadow:0 0 30px rgba(255,100,0,.8),inset 0 0 20px rgba(255,100,0,.4);visibility:hidden}
