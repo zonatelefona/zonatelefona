@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<title>Boost reklama</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #07060f; }
+  body { font-family: "DejaVu Sans", "Liberation Sans", Arial, sans-serif; color: #fff; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden;
+    background: radial-gradient(circle at 50% 30%, #2a0f4a 0%, #0d0820 55%, #05040b 100%); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  #b1 { width: 700px; height: 700px; background: #ff2d75; left: -200px; top: 100px; }
+  #b2 { width: 650px; height: 650px; background: #19e6ff; right: -220px; top: 900px; }
+  #b3 { width: 500px; height: 500px; background: #8b3dff; left: 250px; top: 1400px; }
+
+  .scene { position: absolute; inset: 0; opacity: 0; display: flex; flex-direction: column;
+    align-items: center; }
+  .big { font-weight: 900; font-size: 118px; line-height: 1.05; text-align: center; letter-spacing: -2px; }
+  .mid { font-weight: 800; font-size: 74px; line-height: 1.1; text-align: center; }
+  .small { font-weight: 700; font-size: 44px; text-align: center; opacity: .9; }
+  .grad { background: linear-gradient(90deg, #ff2d75, #ffb02e, #19e6ff); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .tag { display: inline-block; padding: 14px 34px; border-radius: 60px; font-size: 40px; font-weight: 800;
+    background: linear-gradient(90deg, #ff2d75, #8b3dff); box-shadow: 0 10px 40px rgba(255,45,117,.5); }
+
+  /* phone mockup */
+  .phone { position: absolute; width: 560px; height: 1060px; border-radius: 70px; background: #111;
+    border: 14px solid #1d1d26; box-shadow: 0 40px 120px rgba(0,0,0,.7), 0 0 0 3px #333 inset; overflow: hidden; }
+  .screen { position: absolute; inset: 0; background: linear-gradient(160deg, #3b1d5e, #12324a 60%, #0d0d18); }
+  .notch { position: absolute; top: 18px; left: 50%; width: 170px; height: 40px; margin-left: -85px;
+    background: #000; border-radius: 30px; z-index: 5; }
+  .live { position: absolute; top: 90px; left: 30px; display: flex; gap: 14px; align-items: center; z-index: 4; }
+  .live .badge { background: #ff1f4b; padding: 8px 18px; border-radius: 12px; font-weight: 900; font-size: 30px; }
+  .live .eye { background: rgba(0,0,0,.45); padding: 8px 18px; border-radius: 12px; font-weight: 800; font-size: 30px; }
+  .streamer { position: absolute; left: 50%; top: 330px; width: 300px; height: 300px; margin-left: -150px;
+    border-radius: 50%; background: linear-gradient(135deg, #ffb02e, #ff2d75); display: flex;
+    align-items: center; justify-content: center; font-size: 170px; }
+  .chat { position: absolute; left: 26px; bottom: 140px; width: 420px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { background: rgba(0,0,0,.4); border-radius: 22px; padding: 10px 18px; font-size: 26px; font-weight: 700; }
+  .msg b { color: #19e6ff; }
+  .heart { position: absolute; font-size: 60px; }
+
+  .counterBox { font-weight: 900; font-size: 190px; letter-spacing: -4px; text-align: center; }
+  .label { font-size: 46px; font-weight: 700; opacity: .85; text-align: center; }
+
+  .card { width: 900px; border-radius: 48px; padding: 50px; background: rgba(255,255,255,.07);
+    border: 2px solid rgba(255,255,255,.15); box-shadow: 0 30px 80px rgba(0,0,0,.4); }
+  .num { font-size: 40px; font-weight: 900; color: #ffb02e; letter-spacing: 6px; }
+
+  .avatars { position: relative; width: 900px; height: 520px; }
+  .av { position: absolute; width: 130px; height: 130px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 72px; border: 6px solid #fff; }
+  .join { position: absolute; left: 0; font-size: 34px; font-weight: 700; background: rgba(0,0,0,.45);
+    padding: 12px 24px; border-radius: 30px; white-space: nowrap; }
+
+  .bars { display: flex; align-items: flex-end; gap: 34px; height: 520px; }
+  .bar { width: 110px; border-radius: 24px 24px 8px 8px; background: linear-gradient(0deg, #8b3dff, #ff2d75); }
+  .rocket { position: absolute; font-size: 190px; }
+
+  .stat { display: flex; justify-content: space-between; align-items: center; width: 800px; padding: 30px 40px;
+    border-radius: 30px; background: rgba(0,0,0,.35); margin-top: 26px; }
+  .stat .k { font-size: 44px; font-weight: 700; }
+  .stat .v { font-size: 64px; font-weight: 900; }
+
+  .pill { font-size: 50px; font-weight: 900; padding: 22px 46px; border-radius: 70px; margin: 14px;
+    border: 4px solid rgba(255,255,255,.8); }
+  .cta { font-size: 76px; font-weight: 900; padding: 40px 80px; border-radius: 90px;
+    background: linear-gradient(90deg, #ff2d75, #ffb02e); color: #1a0710; box-shadow: 0 20px 80px rgba(255,120,60,.6); }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div>
+
+  <!-- SCENA 1: hook (0 - 3.5s) -->
+  <div class="scene" id="s1">
+    <div class="phone" id="ph1" style="left:260px; top:560px;">
+      <div class="screen" id="scr1" style="filter:grayscale(1) brightness(.6)"></div>
+      <div class="notch"></div>
+      <div class="live"><span class="badge">LIVE</span><span class="eye" id="eye1">👁 3</span></div>
+      <div class="streamer">😐</div>
+      <div class="chat"><div class="msg" style="opacity:.6">... tišina ...</div></div>
+    </div>
+    <div class="big" id="s1t" style="position:absolute; top:150px; width:100%;">Tvoj lajv<br>je <span class="grad">prazan?</span></div>
+  </div>
+
+  <!-- SCENA 2: preokret (3.5 - 8s) -->
+  <div class="scene" id="s2">
+    <div class="phone" id="ph2" style="left:260px; top:600px;">
+      <div class="screen"></div>
+      <div class="notch"></div>
+      <div class="live"><span class="badge">LIVE</span><span class="eye" id="eye2">👁 3</span></div>
+      <div class="streamer" id="face2">🤩</div>
+      <div class="chat" id="chat2"></div>
+      <div id="hearts2"></div>
+    </div>
+    <div class="big" id="s2t" style="position:absolute; top:170px; width:100%;">Mi to<br><span class="grad">menjamo!</span></div>
+  </div>
+
+  <!-- SCENA 3: dodavanje ljudi u lajv (8 - 13s) -->
+  <div class="scene" id="s3" style="justify-content:center;">
+    <div class="num">01</div>
+    <div class="mid" style="margin:20px 0 50px;">Dodavanje ljudi<br><span class="grad">u lajv</span></div>
+    <div class="avatars" id="avs"></div>
+    <div class="counterBox" id="c3" style="font-size:150px; margin-top:20px;">+0</div>
+    <div class="label">gledalaca u tvom lajvu</div>
+  </div>
+
+  <!-- SCENA 4: boost lajva (13 - 18s) -->
+  <div class="scene" id="s4" style="justify-content:center;">
+    <div class="num">02</div>
+    <div class="mid" style="margin:20px 0 60px;">Boost <span class="grad">lajva</span></div>
+    <div class="card" style="display:flex; flex-direction:column; align-items:center; position:relative;">
+      <div class="bars" id="bars4"></div>
+      <div class="rocket" id="rocket4" style="left:600px; top:400px;">🚀</div>
+    </div>
+    <div class="small" style="margin-top:50px;">Više gledalaca = <span class="grad">veći doseg</span><br>i viša pozicija u preporukama</div>
+  </div>
+
+  <!-- SCENA 5: boost profila (18 - 23s) -->
+  <div class="scene" id="s5" style="justify-content:center;">
+    <div class="num">03</div>
+    <div class="mid" style="margin:20px 0 50px;">Boost <span class="grad">profila</span></div>
+    <div class="card" style="display:flex; flex-direction:column; align-items:center;">
+      <div style="width:220px;height:220px;border-radius:50%;background:linear-gradient(135deg,#19e6ff,#8b3dff);display:flex;align-items:center;justify-content:center;font-size:120px;border:8px solid #fff;">😎</div>
+      <div style="font-size:48px;font-weight:800;margin-top:24px;">@tvoj.profil</div>
+      <div id="follow5" class="counterBox" style="font-size:170px;margin-top:20px;">1.2K</div>
+      <div class="label">pratilaca</div>
+      <div id="followBtn" style="margin-top:34px;font-size:44px;font-weight:900;padding:20px 80px;border-radius:24px;background:#ff2d75;">Prati +</div>
+    </div>
+  </div>
+
+  <!-- SCENA 6: boost videa (23 - 27.3s) -->
+  <div class="scene" id="s6" style="justify-content:center;">
+    <div class="num">04</div>
+    <div class="mid" style="margin:20px 0 40px;">Boost <span class="grad">videa</span></div>
+    <div class="stat" id="st1"><span class="k">▶️ Pregledi</span><span class="v" id="v1">0</span></div>
+    <div class="stat" id="st2"><span class="k">❤️ Lajkovi</span><span class="v" id="v2">0</span></div>
+    <div class="stat" id="st3"><span class="k">💬 Komentari</span><span class="v" id="v3">0</span></div>
+    <div class="stat" id="st4"><span class="k">🔁 Deljenja</span><span class="v" id="v4">0</span></div>
+    <div class="tag" id="viral" style="margin-top:60px; font-size:56px;">🔥 VIRALNO</div>
+  </div>
+
+  <!-- SCENA 7: CTA (27.3 - 30s) -->
+  <div class="scene" id="s7" style="justify-content:center;">
+    <div class="big" id="s7t" style="font-size:104px;">Postani<br><span class="grad">primećen!</span></div>
+    <div style="display:flex; flex-wrap:wrap; justify-content:center; width:1000px; margin:60px 0;">
+      <div class="pill" id="p1">⚡ Brzo</div><div class="pill" id="p2">🔒 Sigurno</div><div class="pill" id="p3">💸 Povoljno</div>
+    </div>
+    <div class="small" id="plat" style="margin-bottom:70px;">TikTok • Instagram • YouTube • Facebook</div>
+    <div class="cta" id="cta">📩 Piši u DM</div>
+  </div>
+
+  <div id="flash"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x, a=0, b=1) => Math.max(a, Math.min(b, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeIn = x => x * x * x;
+const back = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const elastic = x => x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - .75) * (2 * Math.PI / 3)) + 1;
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1e4 ? (n/1e3).toFixed(1).replace('.', ',') + 'K' : Math.round(n).toLocaleString('de-DE');
+function rnd(seed) { const x = Math.sin(seed * 9301 + 49297) * 233280; return x - Math.floor(x); }
+
+const SC = { s1:[0,3.5], s2:[3.5,8], s3:[8,13], s4:[13,18], s5:[18,23], s6:[23,27.3], s7:[27.3,30.5] };
+
+// --- build dynamic elements ---
+const names = ['marko_99','ana.bg','nikola','jelena_ns','stefan','milica','luka.rs','teodora','petar_x','sara.ns','dusan','iva'];
+const emo = ['😀','😎','🥳','😍','🤠','😜','🤗','😇','🙂','😺','🤓','😃'];
+const avCols = ['#ff2d75','#19e6ff','#ffb02e','#8b3dff','#2dff8b','#ff6b2d'];
+const avs = $('avs');
+for (let i = 0; i < 12; i++) {
+  const d = document.createElement('div'); d.className = 'av';
+  d.style.background = avCols[i % 6]; d.textContent = emo[i];
+  d.style.left = (40 + (i % 6) * 140) + 'px'; d.style.top = (i < 6 ? 30 : 190) + 'px';
+  d.id = 'av' + i; avs.appendChild(d);
+}
+for (let i = 0; i < 3; i++) {
+  const j = document.createElement('div'); j.className = 'join'; j.id = 'join' + i;
+  j.style.top = (380 + i * 0) + 'px'; avs.appendChild(j);
+}
+const bars = $('bars4'); const barH = [70, 110, 150, 230, 330, 470];
+barH.forEach((h, i) => { const b = document.createElement('div'); b.className = 'bar'; b.id = 'bar' + i; bars.appendChild(b); });
+const chat2 = $('chat2');
+const msgs = [['ana.bg','🔥🔥🔥'],['marko_99','pozz iz Rume!'],['jelena_ns','top lajv ❤️'],['luka.rs','koliko nas je 😮'],['stefan','legenda!']];
+msgs.forEach((m, i) => { const d = document.createElement('div'); d.className = 'msg'; d.id = 'm' + i; d.innerHTML = `<b>${m[0]}</b> ${m[1]}`; chat2.appendChild(d); });
+const hearts = $('hearts2'); const hs = ['❤️','💖','💜','💙','🧡','❤️'];
+for (let i = 0; i < 16; i++) { const h = document.createElement('div'); h.className = 'heart'; h.id = 'h' + i; h.textContent = hs[i % 6]; hearts.appendChild(h); }
+
+function sceneAlpha(t, [a, b]) {
+  const fi = prog(t, a, a + .35), fo = 1 - prog(t, b - .3, b);
+  return Math.min(fi, fo);
+}
+function pop(el, t, at, dur = .5, fn = back) {
+  const p = prog(t, at, at + dur); const s = fn(p);
+  el.style.opacity = clamp(p * 3); el.style.transform = `scale(${s})`; return p;
+}
+
+function render(t) {
+  // background blobs drift
+  $('b1').style.transform = `translate(${Math.sin(t*.7)*120}px, ${Math.cos(t*.5)*160}px)`;
+  $('b2').style.transform = `translate(${Math.cos(t*.6)*140}px, ${Math.sin(t*.8)*120}px)`;
+  $('b3').style.transform = `translate(${Math.sin(t*.9)*160}px, ${Math.cos(t*.4)*100}px)`;
+  // beat pulse (120bpm)
+  const beat = Math.pow(1 - ((t * 2) % 1), 4);
+
+  for (const k in SC) {
+    const a = sceneAlpha(t, SC[k]);
+    $(k).style.opacity = a; $(k).style.visibility = a > 0 ? 'visible' : 'hidden';
+  }
+  // flashes at scene changes
+  let fl = 0; [3.5, 8, 13, 18, 23, 27.3].forEach(c => { fl = Math.max(fl, 1 - Math.abs(t - c) / .12); });
+  $('flash').style.opacity = clamp(fl) * .35;
+
+  // S1
+  if (t < 4) {
+    const p = prog(t, 0, .7);
+    $('s1t').style.transform = `translateY(${(1 - easeOut(p)) * -80}px) scale(${.8 + .2 * back(p)})`;
+    $('s1t').style.opacity = p;
+    const pp = prog(t, .2, 1.1);
+    $('ph1').style.transform = `translateY(${(1 - easeOut(pp)) * 600}px) rotate(${Math.sin(t * 1.5) * 2}deg)`;
+    $('eye1').textContent = '👁 ' + (t < 1.8 ? 3 : t < 2.6 ? 2 : 1);
+  }
+  // S2
+  if (t > 3.3 && t < 8.3) {
+    const lt = t - 3.5;
+    const p = prog(lt, 0, .6);
+    $('s2t').style.transform = `scale(${elastic(p) * (1 + beat * .03)})`;
+    const viewers = 3 + (2497) * easeIn(prog(lt, .4, 3.8)) ;
+    $('eye2').textContent = '👁 ' + fmt(viewers);
+    $('eye2').style.transform = `scale(${1 + beat * .12})`;
+    $('ph2').style.transform = `translateY(${(1 - easeOut(prog(lt, 0, .5))) * 300}px) scale(${1 + beat * .01})`;
+    $('face2').style.transform = `scale(${1 + beat * .08})`;
+    msgs.forEach((m, i) => { const q = prog(lt, .8 + i * .55, 1.1 + i * .55);
+      const e = $('m' + i); e.style.opacity = q; e.style.transform = `translateX(${(1 - easeOut(q)) * -200}px)`; });
+    for (let i = 0; i < 16; i++) {
+      const st = .6 + i * .22; const q = prog(lt, st, st + 1.8);
+      const e = $('h' + i); e.style.opacity = q > 0 && q < 1 ? (1 - q) * 1.4 : 0;
+      e.style.left = (400 + Math.sin(q * 6 + i) * 40 + rnd(i) * 60) + 'px';
+      e.style.top = (880 - q * 650) + 'px';
+      e.style.transform = `scale(${.6 + q * .8 * rnd(i + 3) + .3})`;
+    }
+  }
+  // S3: avatars join
+  if (t > 7.8 && t < 13.3) {
+    const lt = t - 8;
+    for (let i = 0; i < 12; i++) pop($('av' + i), lt, .4 + i * .25, .45);
+    for (let i = 0; i < 3; i++) {
+      const e = $('join' + i); const idx = Math.floor(clamp((lt - .4) / .25, 0, 11.99));
+      const n = names[(idx + i * 4) % 12];
+      e.textContent = `✅ ${n} se pridružio/la`;
+      e.style.opacity = i === 0 && lt > .4 ? 1 : 0; e.style.left = '200px';
+      e.style.transform = `translateY(${(1 - easeOut(((lt - .4) % .25) / .25)) * 20}px)`;
+    }
+    const c = 5000 * easeOut(prog(lt, .4, 3.8));
+    $('c3').textContent = '+' + fmt(c);
+    $('c3').style.transform = `scale(${1 + beat * .05})`;
+  }
+  // S4: bars + rocket
+  if (t > 12.8 && t < 18.3) {
+    const lt = t - 13;
+    barH.forEach((h, i) => { const q = easeOut(prog(lt, .3 + i * .25, .9 + i * .25)); $('bar' + i).style.height = (h * q) + 'px'; });
+    const rq = prog(lt, 1.9, 4.6);
+    $('rocket4').style.transform = `translate(${rq * 260}px, ${-easeIn(rq) * 900 + Math.sin(lt * 20) * 4}px) rotate(${-10 + rq * 10}deg)`;
+    $('rocket4').style.opacity = rq > .9 ? (1 - rq) * 10 : 1;
+  }
+  // S5: followers
+  if (t > 17.8 && t < 23.3) {
+    const lt = t - 18;
+    const f = 1200 + 48800 * easeOut(prog(lt, .5, 3.6));
+    $('follow5').textContent = fmt(f).replace(/^(\d+)$/, '$1');
+    $('follow5').style.transform = `scale(${1 + beat * .05})`;
+    const fb = $('followBtn');
+    if (lt > 3.6) { fb.textContent = 'Pratiš ✓'; fb.style.background = '#2a2a3a'; }
+    else { fb.textContent = 'Prati +'; fb.style.background = '#ff2d75'; fb.style.transform = `scale(${1 + beat * .06})`; }
+  }
+  // S6: video stats
+  if (t > 22.8 && t < 27.6) {
+    const lt = t - 23;
+    const tgt = [1250000, 186000, 9400, 27000];
+    for (let i = 0; i < 4; i++) {
+      const q = prog(lt, .2 + i * .2, .6 + i * .2);
+      const e = $('st' + (i + 1)); e.style.opacity = q; e.style.transform = `translateX(${(1 - easeOut(q)) * 300}px)`;
+      $('v' + (i + 1)).textContent = fmt(tgt[i] * easeOut(prog(lt, .3 + i * .2, 3.2)));
+    }
+    const vq = prog(lt, 3.0, 3.5);
+    $('viral').style.opacity = vq; $('viral').style.transform = `scale(${back(vq) * (1 + beat * .08)}) rotate(-4deg)`;
+  }
+  // S7: CTA
+  if (t > 27.1) {
+    const lt = t - 27.3;
+    const p = prog(lt, 0, .5);
+    $('s7t').style.transform = `scale(${elastic(p)})`;
+    ['p1', 'p2', 'p3'].forEach((id, i) => pop($(id), lt, .35 + i * .18, .4));
+    $('plat').style.opacity = prog(lt, .9, 1.3);
+    const c = prog(lt, 1.1, 1.6);
+    $('cta').style.opacity = c; $('cta').style.transform = `scale(${back(c) * (1 + beat * .06)})`;
+  }
+}
+window.render = render;
+render(0);
+</script>
+</body>
+</html>
