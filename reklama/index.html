@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA — Reklama</title>
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/200.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/300.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/500.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/300-italic.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/400-italic.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/500-italic.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/500.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl" width="1080" height="1920"></canvas>
+
+  <div id="ui">
+    <div id="flare" class="flare"></div>
+    <div id="flare2" class="flare thin"></div>
+
+    <!-- S1 HOOK -->
+    <div id="s1" class="block" style="top:1395px">
+      <div class="line sans lg split" id="s1a">Tvoj sledeći telefon</div>
+      <div class="line serif xl split" id="s1b">počinje ovde.</div>
+    </div>
+
+    <!-- S2 BRAND -->
+    <div id="s2" class="lockup" style="top:700px">
+      <div class="lk-zona shine" id="s2z">ZONA</div>
+      <div class="lk-rule" id="s2r"></div>
+      <div class="lk-tel split" id="s2t">TELEFONA</div>
+      <div class="lk-small split" id="s2s">PREMIUM MOBILNI TELEFONI</div>
+    </div>
+
+    <!-- S3 KUPOVINA -->
+    <div id="s3" class="section" style="top:178px">
+      <div class="idx split" id="s3i">01 — PRODAJA</div>
+      <div class="title split" id="s3t">KUPOVINA</div>
+      <div class="sub serif split" id="s3s">Provereni telefoni. Premium izbor.</div>
+    </div>
+
+    <!-- S4 OTKUP -->
+    <div id="s4" class="section" style="top:178px">
+      <div class="idx split" id="s4i">02 — OTKUP</div>
+      <div class="title split" id="s4t">OTKUP</div>
+      <div class="sub serif split" id="s4s">Brza procena. Fer ponuda.</div>
+    </div>
+    <div id="card" class="glass card">
+      <div class="card-head"><span>PROCENA UREĐAJA</span><span id="pct">0%</span></div>
+      <div class="bar"><div id="barfill"></div></div>
+      <div class="row" id="r1"><span>Ekran</span><span class="st"><i class="dot"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17.2 8.8"/></svg></span></div>
+      <div class="row" id="r2"><span>Baterija</span><span class="st"><i class="dot"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17.2 8.8"/></svg></span></div>
+      <div class="row" id="r3"><span>Kamera</span><span class="st"><i class="dot"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17.2 8.8"/></svg></span></div>
+      <div class="offer" id="offer">Fer ponuda za tvoj telefon</div>
+    </div>
+
+    <!-- S5 ZAMENA -->
+    <div id="s5" class="section" style="top:178px">
+      <div class="idx split" id="s5i">03 — ZAMENA</div>
+      <div class="title split" id="s5t">ZAMENA</div>
+      <div class="sub serif split" id="s5s">Staro za novo. Bez komplikacija.</div>
+    </div>
+    <div id="s5tags">
+      <span id="tagOld" class="tag">TVOJ STARI</span>
+      <span id="tagNew" class="tag">TVOJ NOVI</span>
+    </div>
+
+    <!-- S6 MONTAGE -->
+    <div id="w1" class="word">Kupovina.</div>
+    <div id="w2" class="word">Otkup.</div>
+    <div id="w3" class="word">Zamena.</div>
+    <div id="s6" class="block" style="top:1400px">
+      <div class="line sans lg split" id="s6a">Premium telefoni.</div>
+      <div class="line serif xl split" id="s6b">Sigurna kupovina.</div>
+    </div>
+
+    <!-- S7 END -->
+    <div id="s7" class="lockup" style="top:1215px">
+      <div class="lk-zona sm shine" id="s7z">ZONA</div>
+      <div class="lk-rule" id="s7r"></div>
+      <div class="lk-tel sm split" id="s7t">TELEFONA</div>
+    </div>
+    <div id="s7tag" class="serif tagline split">Pronađi svoj sledeći telefon.</div>
+    <div id="pill" class="glass pill">
+      <svg class="ig" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="12"/><circle cx="24" cy="24" r="9.5"/><circle cx="35.2" cy="12.8" r="2.2" class="f"/></svg>
+      <span id="handle">@zona.telefona</span>
+    </div>
+    <div id="footer" class="split">KUPOVINA · OTKUP · ZAMENA · RUMA</div>
+  </div>
+  <div id="flash"></div>
+</div>
+<script type="module" src="scene.js"></script>
+</body>
+</html>
