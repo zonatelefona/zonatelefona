@@ -19,7 +19,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
 .blk,.reveal,.stack{left:0;right:0;text-align:center;white-space:nowrap}
 .h1{font-weight:900;font-size:230px;line-height:.95;letter-spacing:-.01em}
 .h2{font-weight:900;font-size:150px;line-height:1;letter-spacing:-.01em;margin-top:6px}
-.h1b{font-weight:900;font-size:148px;letter-spacing:-.01em}
+.h1b{font-weight:900;font-size:106px;letter-spacing:-.01em}
 .h3{font-weight:900;font-size:170px;line-height:1.02;letter-spacing:-.01em;display:inline-block}
 .h3x{font-weight:900;font-size:260px;line-height:1.05;letter-spacing:-.02em;display:inline-block;padding:0 20px}
 .sl{overflow:hidden;padding:0 30px}
