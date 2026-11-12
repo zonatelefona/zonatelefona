@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA — Reklama v3</title>
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/800.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/900.css">
+<link rel="stylesheet" href="node_modules/@fontsource/jetbrains-mono/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/jetbrains-mono/700.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="mb1" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb1b" stdDeviation="0 0"/></filter>
+  <filter id="mb2" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb2b" stdDeviation="0 0"/></filter>
+  <filter id="mb3" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb3b" stdDeviation="0 0"/></filter>
+  <filter id="mb4" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb4b" stdDeviation="0 0"/></filter>
+</svg>
+<div id="stage">
+  <div id="bg"><div id="glowA" class="glow"></div><div id="glowB" class="glow"></div></div>
+  <canvas id="gl" width="1080" height="1920"></canvas>
+  <canvas id="fx" width="1080" height="1920"></canvas>
+
+  <div id="content">
+    <!-- S1 -->
+    <div id="s1" class="reveal" style="top:760px">
+      <div class="ln top"></div><div class="ln bot"></div>
+      <div class="rtxt"><div class="h1 cream">IMAŠ</div><div class="h2 org">TELEFON?</div></div>
+    </div>
+
+    <!-- S2 -->
+    <div id="s2t" class="blk" style="top:300px"><span class="h1b cream">KUPUJEMO</span><span class="h1b org">!</span></div>
+    <div id="s2m" class="prompt" style="top:500px;left:150px;width:780px"><span class="gt">›</span> <span class="ty"></span><i class="caret"></i></div>
+    <div id="panel" class="panel" style="top:1310px;left:640px">
+      <div class="prow"><span>X</span><b id="pX">0</b></div><div class="prow"><span>Y</span><b id="pY">0</b></div>
+      <div class="prow"><span>Z</span><b id="pZ">0</b></div><div class="prow"><span>ROT X</span><b id="pRX">0</b></div><div class="prow"><span>ROT Y</span><b id="pRY">0</b></div>
+    </div>
+    <div id="curve" class="panel" style="top:1580px;left:640px;width:320px;height:190px">
+      <div class="plabel">EASE: POWER3.INOUT</div>
+      <svg viewBox="0 0 300 140" width="290" height="140"><path id="cpath" d="" fill="none" stroke="#ff7a1a" stroke-width="3"/><circle id="cdot" r="7" fill="#fff"/></svg>
+    </div>
+    <div id="s2lbl" class="mono lbl" style="top:1310px;left:120px">● MODEL 01<br><span>PROCENA U TOKU</span></div>
+
+    <!-- S3 -->
+    <div id="s3" class="stack" style="top:560px">
+      <div class="sl"><div class="h3 cream" id="w1">PRODAJ.</div></div>
+      <div class="sl"><div class="h3 cream" id="w2">ZAMENI.</div></div>
+      <div class="sl"><div class="h3x grad" id="w3">KUPI.</div></div>
+    </div>
+
+    <!-- S4 -->
+    <div id="s4p" class="prompt big" style="top:420px;left:110px;width:860px"><span class="gt">›</span> <span class="ty"></span><i class="caret"></i></div>
+    <div id="ring" class="ring"></div>
+    <div id="boxes">
+      <div class="box" id="b1" style="top:630px"><i class="bn">01</i><div class="bt cream">TELEFON</div><div class="bs">tvoj uređaj</div></div>
+      <div class="conn" id="c1" style="top:780px"></div>
+      <div class="box" id="b2" style="top:850px"><i class="bn">02</i><div class="bt cream">PROCENA</div><div class="bs">brzo · na licu mesta</div></div>
+      <div class="conn" id="c2" style="top:1000px"></div>
+      <div class="box hot" id="b3" style="top:1070px"><i class="bn">03</i><div class="bt org">FER CENA</div><div class="bs">bez komplikacija</div></div>
+    </div>
+    <div id="s4h" class="blk" style="top:1300px"><div class="h4 cream">BRZA PROCENA.</div><div class="h4 grad">FER CENA.</div></div>
+
+    <!-- S5 -->
+    <div id="s5a" class="blk" style="top:640px"><div class="h5a cream">TVOJ SLEDEĆI</div></div>
+    <div id="s5b" class="blk" style="top:790px"><div class="h5b cream">TELEFON</div></div>
+    <div id="s5c" class="blk" style="top:1030px"><div class="h5c grad">JE OVDE.</div></div>
+    <div id="s5t" class="blk" style="top:300px"><div class="h4 cream">SVI <span class="grad">BRENDOVI.</span></div></div>
+    <div id="lab1" class="mono tag">iPhone</div><div id="lab2" class="mono tag">Samsung</div><div id="lab3" class="mono tag">Xiaomi</div>
+
+    <!-- S6 -->
+    <div id="s6" class="reveal" style="top:660px">
+      <div class="ln top"></div><div class="ln bot"></div>
+      <div class="rtxt"><div class="hz grad">ZONA</div><div class="ht cream">TELEFONA</div></div>
+    </div>
+    <div id="s6a" class="blk" style="top:1105px"><div class="tagline">KUPOVINA <b>•</b> OTKUP <b>•</b> ZAMENA</div></div>
+    <div id="s6b" class="blk" style="top:1190px"><div class="ruma">RUMA</div></div>
+    <div id="s6p" class="prompt big" style="top:1320px;left:140px;width:800px"><span class="gt">›</span> <span class="ty"></span><i class="caret"></i></div>
+    <div id="dot" class="dot"></div>
+  </div>
+
+  <div id="hud">
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="hl mono" id="hudL"><b>●</b> ZONA TELEFONA · 1080 × 1920 · 30 FPS</div>
+    <div class="hr mono" id="hudT">00:00:00</div>
+    <div class="hb mono" id="hudB">KADAR 01 / 06</div>
+    <div class="hbr mono">@zona.telefona</div>
+  </div>
+  <div id="flash"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

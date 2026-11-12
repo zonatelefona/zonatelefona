@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
     "@fontsource/montserrat": "^5.1.0",
     "three": "^0.170.0"
   }
