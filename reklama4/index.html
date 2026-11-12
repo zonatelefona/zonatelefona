@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA — Reklama v4</title>
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/300.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/700.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/800.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/900.css">
+<link rel="stylesheet" href="node_modules/@fontsource/jetbrains-mono/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/jetbrains-mono/700.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="mb1" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb1b" stdDeviation="0 0"/></filter>
+  <filter id="mb2" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur id="mb2b" stdDeviation="0 0"/></filter>
+</svg>
+<div id="stage">
+  <canvas id="gl" width="1080" height="1920"></canvas>
+  <canvas id="fx" width="1080" height="1920"></canvas>
+  <div id="content">
+    <!-- S1 -->
+    <div id="s1" class="blk" style="top:790px">
+      <div class="sl"><div class="t1 cream" id="s1a">JOŠ UVEK KORISTIŠ</div></div>
+      <div class="sl"><div class="t2 cream" id="s1b"><span class="org">OVAJ</span> TELEFON?</div></div>
+    </div>
+    <!-- S2 -->
+    <div id="s2" class="blk" style="top:1330px">
+      <div class="sl"><div class="t1 cream" id="s2a">A MOŽEŠ DA IMAŠ</div></div>
+      <div class="sl"><div class="t3 grad" id="s2b">OVAJ.</div></div>
+    </div>
+    <!-- S3 -->
+    <div id="s3a" class="blk" style="top:700px"><div class="t1 cream">TVOJ SLEDEĆI</div></div>
+    <div id="s3b" class="blk" style="top:790px"><div class="t4 grad">UPGRADE</div></div>
+    <div id="s3c" class="blk" style="top:1010px"><div class="t2 cream">JE OVDE.</div></div>
+    <!-- S4 -->
+    <div id="s4a" class="blk" style="top:250px"><div class="t5 cream">KOJI BI TI</div><div class="t5 cream"><span class="org">IZABRAO?</span></div></div>
+    <div id="bd1" class="badge">1</div><div id="bd2" class="badge">2</div>
+    <div id="s4b" class="blk" style="top:1440px"><div class="t6 cream"><span class="org">1</span> ILI <span class="org">2</span>?</div></div>
+    <div id="s4p" class="prompt" style="top:1660px;left:190px;width:700px"><span class="gt">›</span> <span class="ty"></span><i class="caret"></i></div>
+    <!-- S5 -->
+    <div id="s5" class="reveal" style="top:330px">
+      <div class="ln top"></div><div class="ln bot"></div>
+      <div class="rtxt"><div class="hz grad">ZONA</div><div class="ht cream">TELEFONA</div></div>
+    </div>
+    <div id="s5a" class="blk" style="top:870px"><div class="t7 cream">ZAPRATI ZA</div><div class="t7 cream">NAJBOLJE <span class="org">TELEFONE.</span></div></div>
+    <div id="s5b" class="blk" style="top:1110px"><div class="t8 cream">POŠALJI <span class="org">DM</span> ZA SVOJ</div><div class="t8 cream">SLEDEĆI UPGRADE.</div></div>
+    <div id="pill" class="pill">
+      <svg class="ig" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="12"/><circle cx="24" cy="24" r="9.5"/><circle cx="35.2" cy="12.8" r="2.6" class="f"/></svg>
+      <span>@zona.telefona</span>
+      <svg class="dm" viewBox="0 0 48 48"><path d="M44 5 4 21l15 6 6 15z"/><path d="M44 5 19 27"/></svg>
+    </div>
+    <div id="ruma" class="blk" style="top:1505px"><div class="ruma">RUMA</div></div>
+  </div>
+  <div id="flash"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
