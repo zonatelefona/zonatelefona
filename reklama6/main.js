@@ -20,6 +20,15 @@ const IMPACTS = [[.12, 1], [.8, 1.25], [2.0, .7], [7.2, 1.4], [12.45, 1.1], [13.
 
 // ------------------------------------------------------------------ assets
 const A = {}; const IPN = 220; const ipF = [];
+const ipCache = new Map();
+async function ipFrame(i) {
+  if (!ipCache.has(i)) {
+    const blob = await (await fetch(`assets/ipf_${String(i + 1).padStart(4, '0')}.jpg`)).blob();
+    ipCache.set(i, await createImageBitmap(blob));
+    while (ipCache.size > 6) { const k = ipCache.keys().next().value; ipCache.get(k).close(); ipCache.delete(k); }
+  }
+  return ipCache.get(i);
+}
 const load = s => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = s; });
 async function asset(name, rim = true) { A[name] = { img: await load(`assets/${name}.png`) }; if (rim) { A[name].rimL = await load(`assets/${name}_rimL.png`); A[name].rimR = await load(`assets/${name}_rimR.png`); } }
 
@@ -69,14 +78,15 @@ function ipVT(t) {                  // ad time → Apple footage time (speed ram
 }
 function drawIP(t, cam) {
   const vt = ipVT(t), f = clamp((vt - 2.0) * 30, 0, IPN - 1.001), f0 = Math.floor(f), fr = f - f0;
+  const im0 = ipCache.get(f0), im1 = ipCache.get(f0 + 1) || im0;
   const z = cam.z, sw = 1080 / z, sh = 1080 / z, sx = cam.x - sw / 2, sy = cam.y - sh / 2;
   ipc.globalAlpha = 1; ipc.fillStyle = '#000'; ipc.fillRect(0, 0, 1080, 1080);
   const N = Math.abs(cam.mb ?? 0) > 2 ? 10 : 1;
   for (let i = 0; i < N; i++) {
     const k = N === 1 ? 0 : (i / (N - 1) - .5) * (cam.mb ?? 0);
     ipc.globalAlpha = N === 1 ? 1 : 1.5 / N; ipc.globalCompositeOperation = N === 1 ? 'source-over' : 'lighter';
-    ipc.drawImage(ipF[f0], sx, sy, sw, sh, k + (cam.dx ?? 0), 0, 1080, 1080);
-    if (fr > .02 && N === 1) { ipc.globalAlpha = fr; ipc.drawImage(ipF[f0 + 1], sx, sy, sw, sh, (cam.dx ?? 0), 0, 1080, 1080); }
+    ipc.drawImage(im0, sx, sy, sw, sh, k + (cam.dx ?? 0), 0, 1080, 1080);
+    if (fr > .02 && N === 1) { ipc.globalAlpha = fr; ipc.drawImage(im1, sx, sy, sw, sh, (cam.dx ?? 0), 0, 1080, 1080); }
   }
   // orange light sweep that only lights the product (adds a tinted copy of the bright pixels inside a moving band)
   if (cam.sweep > 0 && cam.sweep < 1) {
@@ -84,7 +94,7 @@ function drawIP(t, cam) {
     const p = lerp(-300, 1380, cam.sweep);
     ipc.beginPath(); ipc.moveTo(p - 120, 0); ipc.lineTo(p + 60, 0); ipc.lineTo(p - 240, 1080); ipc.lineTo(p - 420, 1080); ipc.closePath(); ipc.clip();
     ipc.filter = 'sepia(1) saturate(5) hue-rotate(-12deg) brightness(.75)';
-    ipc.drawImage(ipF[f0], sx, sy, sw, sh, (cam.dx ?? 0), 0, 1080, 1080);
+    ipc.drawImage(im0, sx, sy, sw, sh, (cam.dx ?? 0), 0, 1080, 1080);
     ipc.restore(); ipc.filter = 'none';
   }
   ipc.globalAlpha = 1; ipc.globalCompositeOperation = 'source-over';
@@ -114,7 +124,8 @@ const gctx = $('grain').getContext('2d');
 const grains = [0, 1, 2, 3].map(k => { const d = gctx.createImageData(540, 960); for (let i = 0; i < d.data.length; i += 4) { const v = hash(i * .013 + k * 91.7) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } return d; });
 
 // ================================================================== setTime
-function setTime(t) {
+async function setTime(t) {
+  if (t >= 1.95 && t < 7.05) { const f = clamp((ipVT(t) - 2.0) * 30, 0, IPN - 1.001), f0 = Math.floor(f); await ipFrame(f0); if (f0 + 1 < IPN) await ipFrame(f0 + 1); }
   for (const el of $('txt').children) el.style.visibility = 'hidden';
   for (const id of ['h1', 'h2', 'h3']) $(id).style.visibility = 'hidden';
   pc.clearRect(0, 0, W, H);
@@ -128,7 +139,7 @@ function setTime(t) {
     set($('h1'), mix(h1, { x: (1 - h1.p) * -120 }));
     set($('h2'), h2);
     set($('h3'), mix(h3, { x: (1 - h3.p) * 120 }));
-    set(hk, { op: 1 - push * .9, s: (1 + .025 * prog(t, .8, 1.62)) * lerp(1, 7, push), blur: push * 30 });
+    set(hk, { op: 1 - push, s: (1 + .025 * prog(t, .8, 1.62)) * lerp(1, 3.2, push), blur: push * 14 });
     streak('st1', t, .0, .26, { y: 900, rot: -16, w: 1.2 });
     streak('st2', t, .66, .24, { y: 1040, rot: 12, w: .9, maxOp: .9 });
     glow = .5 + .4 * pulse(t, .8, .02, .5); glowY = 300;
@@ -251,8 +262,6 @@ function setTime(t) {
 async function boot() {
   for (const f of ['400 100px Anton', '400 100px "Archivo Black"', '400 100px "Bebas Neue"']) await document.fonts.load(f, 'ĆČŠŽĐćčšžđ');
   await document.fonts.ready;
-  const ps = []; for (let i = 1; i <= IPN; i++) ps.push(load(`assets/ipf_${String(i).padStart(4, '0')}.jpg`));
-  ipF.push(...await Promise.all(ps));
   for (const n of ['s26_back', 's26_bl30', 's26_side', 's26_fl30', 's26_front', 'ip17_back']) await asset(n);
   await asset('s26_spen', false); await asset('s26_back_full', false);
   window.setTime = setTime; await setTime(0); window.READY = true;
