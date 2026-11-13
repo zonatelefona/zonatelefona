@@ -16,7 +16,7 @@ Fontovi: Anton, Archivo Black i Bebas Neue.
 |---|---|---|---|
 | 0–2 | IPHONE / ILI / ULTRA? | Narandžasti zrak preseče kadar, reči udaraju (scale-slam) sa suprotnih strana, kamera ulazi kroz tekst | 2 različita cinematic udara, prasak zraka, riser |
 | 2–7 | iPhone 17 Pro (Apple CGI) | Blesak (match cut), push-in na kamere, speed ramp rotacije, ekran, whip pan levo | shutter, servo, tonski sweep, chime, whoosh |
-| 7–12 | Galaxy S26 Ultra | Pad odozgo i sletanje, paljenje ivičnog svetla, brz push-in na macro kamere, odsjaj sočiva, whip-spin kroz 5 stvarnih uglova, S Pen izlazi, whip pan desno | zviždanje pada, najdublji bas udar, električno paljenje, swell, ping, 4 zamaha, sleganje, klik S Pen-a |
+| 7–12 | Galaxy S26 Ultra | Prava rotacija iz Samsung design film-a (izrez po kadru), push-in na macro, pravi krupni kadar u rotaciji, prednja strana + S Pen kao jedna grupa, zajednički izlaz | zviždanje pada, najdublji bas udar, električno paljenje, swell, ping, 4 zamaha, sleganje, klik S Pen-a |
 | 12–17 | Duel | Telefoni uleću sa strana (motion blur), sudar sa svetlosnim rezom, orbita oko centra (zamena dubine), ritmička svetla L/D, build-up | dva whoosh-a, metalni sudar, kružni ton, udari na tekst, stab-ovi, snare roll |
 | 17–24 | CTA | Drop: „TVOJ SLEDEĆI TELEFON ČEKA.“, logo otkriven narandžastim zrakom, ZAPRATI @zona.telefona, POŠALJI DM ZA PONUDU, telefoni se dižu odozdo | drop, braam, zvučni potpis (3 note), UI pop |
 

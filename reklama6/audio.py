@@ -1,4 +1,4 @@
-"""ZONA TELEFONA v6 — "IPHONE ILI ULTRA?" Per-shot sound design Original soundtrack + sound design, synthesized from scratch.
+"""ZONA TELEFONA v6.1 — "IPHONE ILI ULTRA?" Every scene has its own sound family Original soundtrack + sound design, synthesized from scratch.
 120 BPM, D minor. Every hit/whoosh is placed on the same timestamps the visuals use (scene.js).
 usage: python3 audio.py out.wav
 """
@@ -241,9 +241,50 @@ def reverse_swell(length=.8):
     t = T(length); n = hp(noise(len(t)), 1200) * (t / length) ** 3 * .35
     return n + np.sin(2 * np.pi * np.cumsum(60 + 0 * t) / SR) * (t / length) ** 2 * .3
 
-# ------------------------------------------------------------------ music: F minor, 120 BPM (beat = 0.5 s)
+# ------------------------------------------------------------------ distinct sound families
+# HOOK family: drums of war — big toms, reversed crash, brass
+def tom(f0=90, length=.9, dec=.35):
+    t = T(length); f = f0 * (1 + .8 * np.exp(-t / .04))
+    return np.tanh(2.2 * np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / dec)) * .7 + bp(noise(len(t)), 900, 1.5) * np.exp(-t / .05) * .3
+def rev_crash(length=1.0):
+    t = T(length); n = hp(noise(len(t)), 3000) * np.exp(-(length - t) / .35); return n[::1] * .35
+def zap(f0=3000, f1=120, length=.35):            # FM laser for the light streak
+    t = T(length); f = f1 + (f0 - f1) * np.exp(-t / .07)
+    mod = np.sin(2 * np.pi * f * 1.5 * t) * 3 * np.exp(-t / .1)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR + mod) * np.exp(-t / .12) * .3
+# iPHONE family: precise, metallic, high — clicks, sliding metal, glass
+def metal_slide(length=.45):
+    t = T(length); n = noise(len(t)); s = np.zeros_like(n); d = int(SR / 2200)
+    for k in range(4): s[k * d:] += n[:len(n) - k * d] * (.7 ** k)       # comb = metallic shimmer
+    return bp(s, 5200, 1.2) * np.sin(np.pi * t / length) ** .8 * .25
+def tick_hi(f=4200): t = T(.06); return np.sin(2 * np.pi * f * t) * np.exp(-t / .008) * .3 + hp(noise(len(t)), 6000) * np.exp(-t / .002) * .3
+def glass_sweep(length, f0, f1):
+    t = T(length); u = t / length; f = f0 * (f1 / f0) ** u
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return (np.sin(ph) + .4 * np.sin(ph * 2.01) + .2 * np.sin(ph * 3.02)) * np.sin(np.pi * u) ** 1.5 * .12
+# SAMSUNG family: deep, heavy — sub drops, wub glides, low metal
+def sub_drop(length=1.6, f0=110, f1=30):
+    t = T(length); f = f1 + (f0 - f1) * np.exp(-t / .25)
+    return np.tanh(1.8 * np.sin(2 * np.pi * np.cumsum(f) / SR)) * np.exp(-t / .7) * (1 - np.exp(-t / .004)) * .8
+def wub(length=.8, f0=60):
+    t = T(length); lfo = .5 + .5 * np.sin(2 * np.pi * 6 * t)
+    s = (2 * ((f0 * t) % 1) - 1) * .7 + np.sin(2 * np.pi * f0 * .5 * t)
+    return tvfilt(s, lambda z: 120 + 900 * (.5 + .5 * np.sin(2 * np.pi * 6 * z)), 'lp') * np.exp(-t / .5) * .55
+def hum_on(length=.9):                           # electric rim-light ignition
+    t = T(length); s = np.sign(np.sin(2 * np.pi * 50 * t)) * .3 + np.sin(2 * np.pi * 100 * t) * .4 + bp(noise(len(t)), 2500, 1.5) * .25 * np.exp(-t / .05)
+    return lp(s, 1600) * np.minimum(1, t / .01) * np.exp(-t / .35) * .5
+def low_metal(): t = T(1.4); return sum(np.sin(2 * np.pi * 110 * k * t) * a * np.exp(-t / (.5 / k ** .5)) for k, a in ((1, 1), (2.76, .5), (5.4, .25))) * .12
+def mag_click():                                 # S Pen magnetic latch
+    t = T(.2); return (hp(noise(len(t)), 2000) * np.exp(-t / .004) * .6 + np.sin(2 * np.pi * 900 * t) * np.exp(-t / .03) * .3) * .6
+# DUEL family: rhythmic — claps, snaps, tuned toms, electric blade
+def blade(length=.4):
+    t = T(length); s = np.sin(2 * np.pi * np.cumsum(5000 * np.exp(-t / .08) + 300) / SR) * np.exp(-t / .1) * .2
+    return s + bp(noise(len(t)), 6000, 1.2) * np.exp(-t / .06) * .3
+def snap(): t = T(.15); return bp(noise(len(t)), 2400, 1.0) * np.exp(-t / .02) * .6
+
+# ------------------------------------------------------------------ music: F minor, 120 BPM
 Fm = (29, [53, 56, 60, 63, 65]); Db = (25, [49, 53, 56, 60, 63]); Ab = (32, [51, 56, 60, 63, 68]); Eb = (27, [51, 55, 58, 63, 67])
-chords = [(0, 2, Fm), (2, 4, Fm), (4, 7, Db), (7, 9, Fm), (9, 11, Db), (11, 12, Eb), (12, 14, Fm), (14, 16, Ab), (16, 17, Eb), (17, 19, Fm), (19, 21, Db), (21, 24, Fm)]
+chords = [(0, 2, Fm), (2, 7, Fm), (7, 9, Db), (9, 11, Ab), (11, 12, Eb), (12, 14, Fm), (14, 16, Db), (16, 17, Eb), (17, 19, Fm), (19, 21, Db), (21, 24, Fm)]
 ARP = {id(Fm): [65, 68, 72, 75, 77, 75, 72, 68], id(Db): [65, 68, 73, 77, 80, 77, 73, 68], id(Ab): [63, 68, 72, 75, 80, 75, 72, 68], id(Eb): [63, 67, 70, 75, 79, 75, 70, 67]}
 tt = np.arange(N) / SR
 def root_at(x):
@@ -254,14 +295,13 @@ padL = np.zeros(N); padR = np.zeros(N)
 for (a, b, (root, notes)) in chords:
     if a < 2: continue
     st = a - .05; ln = b - st + .6; t = T(ln)
-    ev = np.minimum(1, t / .25) * np.where(t > b - st, np.exp(-(t - (b - st)) / .25), 1)
-    if a >= 17: ev = ev * (1.2 if a == 17 else .9)
+    ev = np.minimum(1, t / .3) * np.where(t > b - st, np.exp(-(t - (b - st)) / .25), 1)
     for k, m in enumerate(notes):
-        s = supersaw(m, ln, 5, .1) * ev * .07; pan = -.6 if k % 2 == 0 else .6
+        s = supersaw(m, ln, 5, .1) * ev * .065; pan = -.6 if k % 2 == 0 else .6
         place(padL, s * np.cos((pan + 1) * np.pi / 4), st); place(padR, s * np.sin((pan + 1) * np.pi / 4), st)
 def pad_cut(x):
-    if x < 7: return 700 + 500 * max(0, x - 2) / 5
-    if x < 12: return 1800
+    if x < 7: return 900
+    if x < 12: return 1300
     if x < 16: return 2600
     if x < 16.95: return 1600 * 4 ** ((x - 16) / .95)
     return max(1500, 5200 * np.exp(-(x - 17) / 3))
@@ -269,97 +309,90 @@ padL = tvfilt(padL, pad_cut, 'lp'); padR = tvfilt(padR, pad_cut, 'lp')
 pe = np.ones(N); pe[(tt >= 16.92) & (tt < 17.0)] = 0
 musL += padL * pe; musR += padR * pe; revS += (padL + padR) * pe * .15
 K = kick(1.05, .55, 46); CL = clap()
-def kick_at(x, g): add(K, x, g); place(duck, -.65 * np.exp(-T(.4) / .1), x)
-# iPhone section: precise, light — tight kick + 16th ticks + filtered pulse bass
-for i in range(int((7.0 - 3.0) / .5)): kick_at(3.0 + i * .5, .55)
+def kick_at(x, g): add(K, x, g); place(duck, -.6 * np.exp(-T(.4) / .1), x)
+# iPhone (2–7): light & precise — 16th ticks, plucked pulse, NO heavy kick
 for i in range(int((7.0 - 2.0) / .125)):
-    x = 2.0 + i * .125; t = T(.03)
-    add(hp(noise(len(t)), 7000) * np.exp(-t / .005) * (.22 if i % 2 == 0 else .12), x, .5, pan=.3 if i % 2 else -.3, music=True)
+    x = 2.0 + i * .125; add(tick_hi(4200 if i % 4 == 0 else 6200), x, .35 if i % 4 == 0 else .18, pan=.3 if i % 2 else -.3, music=True)
 for i in range(int((7.0 - 2.0) / .25)):
-    x = 2.0 + i * .25; tq = T(.22); f = mtof(root_at(x) + 24)
-    s = lp((2 * ((f * tq) % 1) - 1), 700) * np.exp(-tq / .09); add(s, x, .28, music=True)
-# Samsung + duel: full beat, deep 808
-for i in range(int((16.0 - 7.5) / .5)):
-    x = 7.5 + i * .5; kick_at(x, .95)
-    if x >= 8.5 and int((x - 7.5) / .5) % 2 == 1: add(CL, x, .5, rev=.35)
-    if x >= 9.5: add(hat(.022), x + .25, .32, pan=.3)
-    if x >= 12.5: add(hat(.01), x + .125, .16, pan=-.3); add(hat(.01), x + .375, .16, pan=-.3)
-for i in range(int((16.0 - 7.25) / .25)):
-    x = 7.25 + i * .25
-    if [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0][i % 16]: add(b808(root_at(x) + 12, .6, .25), x, .5, music=True)
+    x = 2.0 + i * .25; add(pluck([65, 72, 68, 75][i % 4], .3, 2600), x, .2, pan=-.2 if i % 2 else .2, rev=.15, dly=.25, music=True)
+# Samsung (7–12): heavy — half-time kick + 808 wobble
+for x in (7.0, 8.0, 8.75, 9.7, 10.25, 10.7, 11.25): kick_at(x, 1.0)
+for x in (7.5, 8.5, 9.5, 10.5, 11.5): add(CL, x, .35, rev=.4)
+for i in range(int((11.75 - 7.0) / .5)):
+    x = 7.0 + i * .5; add(b808(root_at(x) + 12, .5, .3), x, .5, music=True)
+# Duel (12–17): four-on-the-floor + snaps + arp, building
+for i in range(int((16.0 - 12.0) / .5)):
+    x = 12.0 + i * .5; kick_at(x, .9)
+    if i % 2 == 1: add(snap(), x, .7, rev=.35); add(CL, x, .3, rev=.3)
+    add(hat(.02), x + .25, .3, pan=.3)
+    if x >= 14: add(hat(.01), x + .125, .15, pan=-.3); add(hat(.01), x + .375, .15, pan=-.3)
 for (a, b, ch) in chords:
     seq = ARP[id(ch)]
     for i in range(int((b - a) / .125)):
         x = a + i * .125
-        if x < 9.5 or 16.92 <= x < 17.0 or x > 23.2: continue
-        g = .2 if x < 12 else .26 if x < 17 else .22 * np.exp(-(x - 17) / 3.5)
-        br = 2400 if x < 12 else 3600 if x < 16 else 2000 + 5000 * (x - 16) if x < 17 else 3200
+        if x < 12.0 or 16.92 <= x < 17.0 or x > 23.2: continue
+        g = .24 if x < 17 else .2 * np.exp(-(x - 17) / 3.5)
+        br = 3000 if x < 16 else 2000 + 5000 * (x - 16) if x < 17 else 3200
         add(pluck(seq[i % 8], .35, br), x, g * (1 if i % 4 == 0 else .7), pan=.4 * np.sin(i * .9), rev=.15, dly=.3, music=True)
-# build 16.0 → 16.92
+for i in range(int((16.0 - 12.0) / .25)):
+    x = 12.0 + i * .25
+    if [1, 0, 0, 1, 0, 0, 1, 0][i % 8]: add(b808(root_at(x) + 12, .45, .2), x, .42, music=True)
 x = 16.0
 while x < 16.9:
-    k = (x - 16) / .9; add(snare(), x, .25 + .45 * k ** 1.4, rev=.25); x += .125 if k < .45 else .0625 if k < .8 else .03125
-add(line_riser(.92), 16.0, .9, rev=.4)
-# drop 17 → end
-kick_at(17.0, 1.2); add(b808(41, 2.5, 1.2), 17.0, .8, music=True)
+    k = (x - 16) / .9; add(snare(), x, .22 + .45 * k ** 1.4, rev=.25); x += .125 if k < .45 else .0625 if k < .8 else .03125
+add(line_riser(.92), 16.0, .85, rev=.4)
+# CTA (17–24): drop, then a calm groove under the logo
+kick_at(17.0, 1.2); add(sub_drop(2.0, 90, 36), 17.0, .7)
 for i in range(int((23.0 - 17.5) / .5)):
-    x = 17.5 + i * .5; kick_at(x, .8)
-    if i % 2 == 1: add(CL, x, .4, rev=.35)
-    add(hat(.02), x + .25, .26, pan=.3)
-for i in range(int((23.0 - 17.0) / .25)):
-    x = 17.0 + i * .25
-    if [1, 0, 0, 1, 0, 0, 1, 0][i % 8]: add(b808(root_at(x) + 12, .55, .22), x, .42, music=True)
+    x = 17.5 + i * .5; kick_at(x, .7)
+    if i % 2 == 1: add(CL, x, .35, rev=.35)
+    add(hat(.02), x + .25, .22, pan=.3)
 
-# ------------------------------------------------------------------ SOUND DESIGN
-# HOOK — powerful cinematic impacts, each different
-add(boom(3.0, 95, 28, 1.1, 1.3), .12, 1.0, rev=.6); add(braam(53, 1.6, .7), .12, .55, rev=.5)
-t = T(.35); add(tvfilt(noise(len(t)), lambda z: 2500 + 9000 * z / .35, 'bp', .9) * np.exp(-t / .12) * .6, 0.0, .8, pan=np.linspace(-1, 1, len(t)), rev=.4)   # streak slash
-add(tick(), .5, .5, rev=.4); add(blip(77, 84, .03), .5, .35, rev=.4)                                   # "ILI"
-add(boom(3.4, 110, 24, 1.4, 1.5), .8, 1.15, rev=.7); add(braam(48, 2.0, .9), .8, .7, rev=.6); add(metal(2.2, 311.1, 1.0), .8, .45, rev=.6)
-t = T(.25); add(tvfilt(noise(len(t)), lambda z: 3000 + 7000 * z / .25, 'bp', .9) * np.exp(-t / .1) * .5, .66, .7, pan=np.linspace(1, -1, len(t)), rev=.4)
-add(line_riser(.4), 1.6, .9, rev=.3); add(reverse_swell(.4), 1.6, .6)                                   # push-in through the type
-# iPHONE — precise mechanical whooshes, tonal sweeps
-add(mech_whoosh(.5), 1.98, .7, rev=.3); add(shutter(), 2.0, .8, rev=.2)
-t = T(.9); add(bp(noise(len(t)), 7500, .9) * np.sin(np.pi * t / .9) * .14, 2.25, .9, pan=np.linspace(-.8, .8, len(t)), rev=.4)   # orange sweep on glass
-add(whoosh(.4, 800, 6000, .85, .9), 2.1, .4, pan=np.linspace(.9, 0, int(.4 * SR)), rev=.2)                # title slides in
-add(servo(.5), 2.4, 1.2)                                                                                 # push-in motor
-add(tonal_sweep(2.0, 330, 1320), 3.3, .95, pan=np.linspace(-.7, .7, int(2.0 * SR)), rev=.4)              # rotation
-add(whoosh(.35, 600, 4000, .6, 1.0), 4.15, .4, rev=.2)                                                  # edge passes
-add(glass_chime([77, 84, 89], 2.0), 5.3, .6, rev=.6)                                                     # screen reveal
-t = T(.9); add(bp(noise(len(t)), 6500, .9) * np.sin(np.pi * t / .9) * .12, 5.55, .9, pan=np.linspace(-.8, .8, len(t)), rev=.4)
-add(whoosh(.4, 300, 7000, .9, 1.0), 6.62, .9, pan=np.linspace(0, -1, int(.4 * SR)), rev=.2)               # whip out
-# SAMSUNG — deeper bass impacts, controlled transitions
-t = T(.2); add(np.sin(2 * np.pi * np.cumsum(1400 * np.exp(-t / .12) + 200) / SR) * .12 * (t / .2), 7.0, .8, rev=.3)   # falling whistle
-add(boom(3.5, 70, 22, 1.5, .4), 7.2, 1.25, rev=.6); add(b808(29, 2.0, 1.0), 7.2, .7)                     # landing — deepest hit
-t = T(.6); add(lp(supersaw(41, .6, 5, .2), 900) * np.exp(-t / .25) * .5, 7.24, .6, rev=.4)               # rim ignites
-t = T(.6); add(bp(noise(len(t)), 5500, 1.0) * np.sin(np.pi * t / .6) * .12, 7.55, .8, pan=np.linspace(-.6, .6, len(t)), rev=.4)
-add(tvfilt(noise(int(.65 * SR)), lambda z: 120 * 12 ** min(1, z / .65), 'lp') * np.linspace(0, 1, int(.65 * SR)) ** 2 * .5, 8.2, .8, rev=.3)   # push-in swell
-add(felt_thump(), 8.85, .7)
-add(bell(89, 1.2, .5), 9.05, .3, rev=.6); add(shimmer(.8), 9.05, .4, rev=.6)                            # lens glint
-for k, (x, f0) in enumerate(((9.5, 900), (9.62, 750), (9.8, 600), (9.98, 480))):                          # whip spin through angles
-    add(whoosh(.18, f0 * .5, f0 * 4, .5, .8), x - .02, .6 - k * .06, pan=.6 - k * .4, rev=.2)
-add(metal_settle(), 10.16, .7, rev=.4)
-add(latch_click(), 10.6, .9, rev=.3); add(friction(.7), 10.62, .9, pan=-.2, rev=.2)                       # S Pen
-add(whoosh(.35, 300, 6500, .9, 1.0), 11.68, .8, pan=np.linspace(0, 1, int(.35 * SR)), rev=.2)            # whip out
-# DUEL — music builds, rhythmic impacts
-add(whoosh(.5, 500, 5000, .9, 1.0), 11.98, .6, pan=np.linspace(-1, -.1, int(.5 * SR)), rev=.2)
-add(whoosh(.5, 250, 3000, .9, 1.0), 11.98, .6, pan=np.linspace(1, .1, int(.5 * SR)), rev=.2)
-add(boom(2.0, 120, 36, .7, 1.6), 12.45, .9, rev=.5); add(metal(1.6, 466.2, .8), 12.45, .55, rev=.5)       # clash
-add(tonal_sweep(2.0, 200, 520), 12.7, .7, pan=np.linspace(-.9, .9, int(2 * SR)), rev=.5)                 # orbit
-for x in (13.0, 14.0): add(snare(), x, .7, rev=.4); add(boom(.8, 140, 60, .25, 1.2), x, .5, rev=.3)       # text slams
-for x, p in ((15.0, -.5), (15.5, .5)): add(stab([65, 68, 72], .5, 3000), x, .7, pan=p, rev=.4)           # light hits L / R
-add(stab([63, 67, 70, 75], .7, 4000), 16.0, .8, rev=.4)
-# CTA — drop, logo sonic signature
-add(braam(41, 2.2, 1.0), 17.0, .6, rev=.5)
-add(whoosh(.4, 700, 5000, .85, 1.0), 16.95, .5, pan=np.linspace(-1, 0, int(.4 * SR)), rev=.2)
-add(boom(2.0, 100, 30, .8, 1.0), 17.45, .8, rev=.5)
-t = T(.6); add(tvfilt(noise(len(t)), lambda z: 1500 + 9000 * z / .6, 'bp', .7) * np.sin(np.pi * t / .6) * .35, 18.75, .8, pan=np.linspace(-1, 1, len(t)), rev=.4)   # logo streak
+# ------------------------------------------------------------------ SOUND DESIGN — one family per scene
+# HOOK: war drums + brass + laser streaks
+add(zap(4200, 160, .4), .0, .9, pan=np.linspace(-1, 1, int(.4 * SR)), rev=.4)
+add(rev_crash(.12), .0, .6, rev=.3)
+add(tom(70, 1.2, .45), .12, 1.0, rev=.5); add(tom(140, .6, .2), .12, .5, rev=.4)
+add(tick_hi(2600), .5, .7, rev=.5)                                                     # "ILI"
+add(zap(3000, 240, .3), .66, .7, pan=np.linspace(1, -1, int(.3 * SR)), rev=.4)
+add(braam(48, 2.2, .9), .8, .85, rev=.6); add(tom(55, 1.5, .6), .8, 1.0, rev=.6); add(boom(3.0, 100, 26, 1.2, .2), .8, .7, rev=.6)
+add(rev_crash(.4), 1.6, .8, rev=.3); add(line_riser(.4), 1.6, .7)
+# iPHONE: precise mechanics + glass
+add(shutter(), 2.0, .9, rev=.2)
+add(metal_slide(.5), 2.42, .9, pan=np.linspace(.8, 0, int(.5 * SR)), rev=.3)          # title slides in
+add(glass_sweep(.9, 2400, 5200), 2.25, .9, pan=np.linspace(-.8, .8, int(.9 * SR)), rev=.5)   # orange light on glass
+add(servo(1.2), 2.0, 1.0)                                                              # push-in motor
+add(glass_sweep(2.4, 400, 1600), 3.5, .9, pan=np.linspace(-.7, .7, int(2.4 * SR)), rev=.5)   # the rotation (footage 4.8→7.2)
+add(metal_slide(.35), 4.45, .6, pan=.4, rev=.3)                                        # edge passes the lens
+add(glass_chime([77, 84, 89], 2.0), 6.2, .6, rev=.6)                                   # screen lights up
+add(glass_sweep(.9, 2200, 4800), 5.55, .7, pan=np.linspace(-.8, .8, int(.9 * SR)), rev=.5)
+add(metal_slide(.3), 6.72, 1.0, pan=np.linspace(0, -1, int(.3 * SR)), rev=.2)            # whip out
+# SAMSUNG: deep & heavy
+add(sub_drop(2.0, 120, 28), 7.0, 1.0); add(hum_on(.9), 7.03, .8, rev=.3)                # power on + orange rim
+add(wub(.6, 58), 7.3, .7)                                                               # title
+add(tvfilt(noise(int(.55 * SR)), lambda z: 100 * 8 ** min(1, z / .55), 'lp') * np.linspace(0, 1, int(.55 * SR)) ** 2 * .6, 8.7, .9)   # push-in rush (low)
+add(low_metal(), 9.25, .8, rev=.4)                                                     # locks onto the lenses
+add(bell(89, 1.0, .4), 9.3, .25, rev=.6)                                               # glint
+add(sub_drop(1.2, 80, 34), 9.7, .8); add(low_metal(), 9.7, .5, rev=.5)                  # close-up cut
+add(mag_click(), 10.92, 1.0, rev=.3); add(friction(.6), 10.95, .9, pan=-.2, rev=.2)     # S Pen
+add(tvfilt(noise(int(.3 * SR)), lambda z: 200 + 1800 * z / .3, 'bp', 1.2) * np.linspace(0, 1, int(.3 * SR)) ** 2 * .7, 11.72, .9, pan=np.linspace(0, -1, int(.3 * SR)))   # heavy whip out
+# DUEL: electric blade + rhythmic hits
+add(blade(.45), 12.0, 1.0, rev=.4)
+for x in (13.0, 13.5): add(blade(.25), x, .45, rev=.3)                                  # blade pulses
+add(snap(), 12.4, .8, rev=.4); add(tom(110, .5, .15), 12.4, .6)                        # "DVA TOP MODELA."
+add(glass_sweep(.5, 800, 5000), 13.85, .8, pan=np.linspace(-1, 1, int(.5 * SR)), rev=.4)   # light bar wipe
+add(snap(), 14.3, .8, rev=.4); add(tom(82, .6, .2), 14.3, .7)                          # "JEDAN IZBOR."
+for x, f in ((15.0, 98), (15.5, 131), (16.0, 87)): add(tom(f, .5, .18), x, .7, pan=-.4 if x == 15.0 else .4 if x == 15.5 else 0, rev=.4)
+# CTA: drop + logo signature
+add(braam(41, 2.2, 1.0), 17.0, .55, rev=.5)
+add(metal_slide(.4), 17.15, .6, pan=np.linspace(-1, 0, int(.4 * SR)), rev=.3)
+add(tom(60, 1.2, .45), 17.45, .9, rev=.5); add(CL, 17.45, .6, rev=.5)
+add(zap(5200, 900, .5), 18.75, .5, pan=np.linspace(-1, 1, int(.5 * SR)), rev=.5)         # logo streak
 for k, m in enumerate((77, 84, 89)): add(bell(m, 2.6, 1.4), 18.8 + k * .14, .45, pan=(k - 1) * .35, rev=.75, dly=.25)   # sonic signature
-add(boom(2.5, 70, 30, 1.0, .2), 18.8, .5, rev=.6); add(shimmer(2.2), 18.9, .5, rev=.7)
-add(whoosh(.4, 800, 5000, .85, .9), 19.95, .4, pan=np.linspace(1, 0, int(.4 * SR)), rev=.2)               # follow slides in
-add(ui_pop(1400), 20.5, .8, rev=.3); add(ui_pop(1870), 20.58, .7, rev=.3)                                # DM pill pops
-add(whoosh(.7, 200, 1600, .6, 1.2), 19.4, .4, rev=.3)                                                    # phones rise
-for x in (21.3, 21.6): add(bp(noise(int(.8 * SR)), 7000, .8) * np.sin(np.pi * np.arange(int(.8 * SR)) / (.8 * SR)) * .08, x, .8, rev=.4)
+add(shimmer(2.2), 18.9, .45, rev=.7)
+add(metal_slide(.4), 19.95, .6, pan=np.linspace(1, 0, int(.4 * SR)), rev=.3)
+add(ui_pop(1400), 20.5, .8, rev=.3); add(ui_pop(1870), 20.58, .7, rev=.3)
+add(glass_sweep(1.0, 300, 900), 19.4, .5, rev=.4)                                      # phones rise
 
 # ------------------------------------------------------------------ mix
 duck = np.clip(duck, .3, 1); musL *= duck; musR *= duck
@@ -377,7 +410,7 @@ def ir():
 def conv(x, h):
     n = 1 << int(np.ceil(np.log2(len(x) + len(h)))); return np.fft.irfft(np.fft.rfft(x, n) * np.fft.rfft(h, n), n)[:len(x)]
 rs = hp(revS, 200); L += conv(rs, ir()) * .45; R += conv(rs, ir()) * .45
-L = hp(L, 28); R = hp(R, 28); L = L + hp(L, 2500) * .18; R = R + hp(R, 2500) * .18
+L = hp(L, 28); R = hp(R, 28); L = L + hp(L, 2500) * .15; R = R + hp(R, 2500) * .15
 m = max(np.max(np.abs(L)), np.max(np.abs(R))); L /= m; R /= m
 drive = 2.0; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
 fade = np.ones(N); sel = tt > 23.3; fade[sel] = np.cos(np.clip((tt[sel] - 23.3) / .7, 0, 1) * np.pi / 2) ** 2

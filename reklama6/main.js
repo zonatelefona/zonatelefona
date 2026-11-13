@@ -32,6 +32,18 @@ async function ipFrame(i) {
 const load = s => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = s; });
 async function asset(name, rim = true) { A[name] = { img: await load(`assets/${name}.png`) }; if (rim) { A[name].rimL = await load(`assets/${name}_rimL.png`); A[name].rimR = await load(`assets/${name}_rimR.png`); } }
 
+// keyed Samsung footage (RGBA frames cut from Samsung's official design film)
+const svCache = new Map();
+async function svFrame(dir, i) {
+  const key = dir + i;
+  if (!svCache.has(key)) {
+    const blob = await (await fetch(`assets/${dir}/${String(i).padStart(4, '0')}.png`)).blob();
+    svCache.set(key, await createImageBitmap(blob));
+    while (svCache.size > 6) { const k = svCache.keys().next().value; svCache.get(k).close(); svCache.delete(k); }
+  }
+  return svCache.get(key);
+}
+const rimC = document.createElement('canvas'), rc = rimC.getContext('2d');
 // ------------------------------------------------------------------ product renderer (rim light, sweep, real multi-sample motion blur)
 const pc = $('pc').getContext('2d');
 const tmp = document.createElement('canvas'), tc = tmp.getContext('2d');
@@ -39,7 +51,8 @@ function drawPhone(a, o) {
   const U = o.U ?? .893, w = a.img.width * U, h = a.img.height * U;
   if (tmp.width !== Math.ceil(w) || tmp.height !== Math.ceil(h)) { tmp.width = Math.ceil(w); tmp.height = Math.ceil(h); }
   tc.globalCompositeOperation = 'source-over'; tc.globalAlpha = 1; tc.clearRect(0, 0, tmp.width, tmp.height);
-  tc.drawImage(a.img, 0, 0, w, h);
+  if (a.sat) tc.filter = `saturate(${a.sat})`;
+  tc.drawImage(a.img, 0, 0, w, h); tc.filter = 'none';
   if ((o.bright ?? 1) < 1) { tc.globalCompositeOperation = 'source-atop'; tc.fillStyle = `rgba(6,6,6,${1 - o.bright})`; tc.fillRect(0, 0, w, h); }
   if (o.sweep !== undefined && o.sweep > 0 && o.sweep < 1) {       // warm light band travelling across the glass
     tc.globalCompositeOperation = 'source-atop';
@@ -49,6 +62,18 @@ function drawPhone(a, o) {
     const sa = o.sweepA ?? .45;
     g.addColorStop(0, 'rgba(249,115,22,0)'); g.addColorStop(.42, `rgba(249,115,22,${sa * .5})`); g.addColorStop(.5, `rgba(255,232,214,${sa})`); g.addColorStop(.58, `rgba(249,115,22,${sa * .5})`); g.addColorStop(1, 'rgba(249,115,22,0)');
     tc.fillStyle = g; tc.fillRect(0, 0, w, h);
+  }
+  if (a.dyn && (o.rimL > 0 || o.rimR > 0)) {
+    if (rimC.width !== tmp.width || rimC.height !== tmp.height) { rimC.width = tmp.width; rimC.height = tmp.height; }
+    for (const [side, amt] of [[1, o.rimL], [-1, o.rimR]]) {
+      if (!(amt > 0)) continue;
+      rc.globalCompositeOperation = 'source-over'; rc.clearRect(0, 0, rimC.width, rimC.height);
+      rc.drawImage(a.img, 0, 0, w, h);
+      rc.globalCompositeOperation = 'destination-out'; rc.drawImage(a.img, side * 7, 0, w, h);
+      rc.globalCompositeOperation = 'source-in'; rc.fillStyle = '#F97316'; rc.fillRect(0, 0, w, h);
+      tc.globalCompositeOperation = 'lighter'; tc.globalAlpha = clamp(amt); tc.filter = 'blur(1.2px)'; tc.drawImage(rimC, 0, 0); tc.filter = 'none'; tc.globalAlpha = clamp(amt) * .8; tc.drawImage(rimC, 0, 0);
+    }
+    tc.globalAlpha = 1;
   }
   tc.globalCompositeOperation = 'lighter';
   if (o.rimL > 0 && a.rimL) { tc.globalAlpha = clamp(o.rimL); tc.drawImage(a.rimL, 0, 0, w, h); }
@@ -71,13 +96,9 @@ function drawPhone(a, o) {
 
 // ------------------------------------------------------------------ iPhone footage with speed ramp + frame blending
 const ipc = $('ipc').getContext('2d');
-function ipVT(t) {                  // ad time → Apple footage time (speed ramps)
-  if (t < 3.3) return lerp(2.6, 4.6, prog(t, 2.0, 3.3));
-  if (t < 5.3) return lerp(4.6, 7.4, eInOutSine(prog(t, 3.3, 5.3)));
-  return lerp(7.4, 9.25, eOutCubic(prog(t, 5.3, 7.0)));
-}
+function ipVT(t) { return t + 1.3; }          // 1:1 real-time playback of Apple's footage (ad 2.0 → footage 3.3)
 function drawIP(t, cam) {
-  const vt = ipVT(t), f = clamp((vt - 2.0) * 30, 0, IPN - 1.001), f0 = Math.floor(f), fr = f - f0;
+  const vt = cam.vt ?? ipVT(t), f0 = clamp(Math.round((vt - 2.0) * 30), 0, IPN - 1), fr = 0;
   const im0 = ipCache.get(f0), im1 = ipCache.get(f0 + 1) || im0;
   const z = cam.z, sw = 1080 / z, sh = 1080 / z, sx = cam.x - sw / 2, sy = cam.y - sh / 2;
   ipc.globalAlpha = 1; ipc.fillStyle = '#000'; ipc.fillRect(0, 0, 1080, 1080);
@@ -125,7 +146,11 @@ const grains = [0, 1, 2, 3].map(k => { const d = gctx.createImageData(540, 960);
 
 // ================================================================== setTime
 async function setTime(t) {
-  if (t >= 1.95 && t < 7.05) { const f = clamp((ipVT(t) - 2.0) * 30, 0, IPN - 1.001), f0 = Math.floor(f); await ipFrame(f0); if (f0 + 1 < IPN) await ipFrame(f0 + 1); }
+  if (t >= 1.95 && t < 7.05) await ipFrame(clamp(Math.round((ipVT(t) - 2.0) * 30), 0, IPN - 1));
+  if (t >= 12.0 && t < 14.3) await ipFrame(clamp(Math.round((4.9 + (t - 12.0) - 2.0) * 30), 0, IPN - 1));
+  if (t >= 7.0 && t < 8.75) await svFrame('sv_rot', 8 + clamp(Math.floor((t - 7.0) * 30), 0, 50));
+  if (t >= 9.7 && t < 10.75) await svFrame('sv_mac', 1 + clamp(Math.floor((t - 9.7) * 30), 0, 29));
+  if (t >= 12.0 && t < 14.3) await svFrame('sv_rot', 58 - clamp(Math.floor((t - 12.0) * 30), 0, 50));
   for (const el of $('txt').children) el.style.visibility = 'hidden';
   for (const id of ['h1', 'h2', 'h3']) $(id).style.visibility = 'hidden';
   pc.clearRect(0, 0, W, H);
@@ -148,9 +173,9 @@ async function setTime(t) {
   if (t >= 1.95 && t < 7.05) {
     let cam;
     if (t < 3.3) { const u = eOutCubic(prog(t, 1.95, 3.3)); cam = { x: lerp(960, 900, u), y: lerp(560, 470, u), z: lerp(1.0, 1.32, u) }; }   // push into the camera plateau
-    else if (t < 5.3) { const u = eInOutSine(prog(t, 3.3, 5.3)); cam = { x: 960, y: lerp(470, 540, u), z: lerp(1.32, 1.0, u) }; }               // pull back during the turn
+    else if (t < 5.3) { const u = eInOutSine(prog(t, 3.3, 5.3)); cam = { x: lerp(900, 960, u), y: lerp(470, 540, u), z: lerp(1.32, 1.0, u) }; }               // pull back during the turn
     else { const u = eOutCubic(prog(t, 5.3, 7.0)); cam = { x: 960, y: 540, z: lerp(1.0, 1.08, u) }; }
-    const wout = eInExpo(prog(t, 6.65, 7.0));                    // whip pan out (left)
+    const wout = eInCubic(prog(t, 6.72, 7.0));                    // whip pan out (left)
     cam.dx = -wout * 1300; cam.mb = wout * 260;
     cam.sweep = t < 4.0 ? prog(t, 2.25, 3.15) : prog(t, 5.55, 6.45);
     drawIP(t, cam);
@@ -163,63 +188,92 @@ async function setTime(t) {
 
   // ---------------- GALAXY S26 ULTRA 7–12 ----------------
   if (t >= 7.0 && t < 12.05) {
-    const U = .893, CX = 540, CY = 930;
-    if (t < 8.2) {                                               // a) drop + impact + rim ignition
-      const f = eInCubic(prog(t, 7.0, 7.2)), vy = t < 7.2 ? (1 - f) * 260 : 0;
-      const land = pulse(t, 7.2, .01, .12);
-      drawPhone(A.s26_back, { cx: CX, cy: lerp(-800, CY, f) + land * 10, U, mby: vy, rimL: clamp(prog(t, 7.24, 7.34)) * (1 + .5 * pulse(t, 7.3, .02, .3)), rimR: clamp(prog(t, 7.4, 7.6)) * .5,
-        bright: lerp(.55, 1, prog(t, 7.25, 7.6)), sweep: prog(t, 7.55, 8.15), glow: prog(t, 7.24, 7.5), glowSide: -1 });
-    } else if (t < 9.5) {                                        // b) fast push-in to the camera system
-      const u = eInOutCubic(prog(t, 8.2, 8.85)), d = eInOutSine(prog(t, 8.85, 9.5));
+    const exit = eInCubic(prog(t, 11.75, 12.0)), gx = -exit * 1300, gmb = exit * 320;     // phone, pen and title leave together
+    if (t < 8.7) {                                               // a) REAL rotation (Samsung design film), lit up by an orange key
+      const im = svCache.get('sv_rot' + (8 + clamp(Math.floor((t - 7.0) * 30), 0, 50)));
+      const on = eOutCubic(prog(t, 7.0, 7.35));
+      drawPhone({ img: im, dyn: true, sat: .55 }, { cx: 540, cy: 960, U: lerp(1.08, 1.16, eInOutSine(prog(t, 7.0, 8.7))), bright: lerp(.15, 1, on),
+        rimL: clamp(prog(t, 7.03, 7.15)) * (1 + .6 * pulse(t, 7.1, .02, .35)), rimR: clamp(prog(t, 7.25, 7.5)) * .6, sweep: prog(t, 7.45, 8.35), sweepA: .4, glow: on * .9, glowSide: -1 });
+    } else if (t < 9.7) {                                        // b) fast push-in on the camera system (official 4500px still)
+      const u = eInOutCubic(prog(t, 8.7, 9.25)), d = eInOutSine(prog(t, 9.25, 9.7));
       const img = A.s26_back_full, C = [img.img.width / 2, img.img.height / 2];
-      const s0 = 1250 / img.img.height, s = lerp(s0, 1.72, u) * (1 + .05 * d);
+      const s0 = 1250 / img.img.height, sc = lerp(s0, 1.72, u) * (1 + .05 * d);
       const F = [330, lerp(470, 720, d)];
-      const F0 = [CX + (F[0] - C[0]) * s0, CY + (F[1] - C[1]) * s0];
+      const F0 = [540 + (F[0] - C[0]) * s0, 960 + (F[1] - C[1]) * s0];
       const Fs = [lerp(F0[0], 540, u), lerp(F0[1], 960, u)];
-      const ox = Fs[0] - (F[0] - C[0]) * s, oy = Fs[1] - (F[1] - C[1]) * s;
-      drawPhone(img, { cx: ox, cy: oy, U: s, sweep: prog(t, 8.95, 9.45), sweepA: .35, sweepAng: 70, glow: .6, glowSide: -1 });
-      // lens glint
-      const gl = pulse(t, 9.05, .06, .25);
-      if (gl > .01) { const gx = ox + (240 - C[0]) * s, gy = oy + (470 - C[1]) * s; const g = pc.createRadialGradient(gx, gy, 0, gx, gy, 260); g.addColorStop(0, `rgba(255,236,220,${.9 * gl})`); g.addColorStop(.2, `rgba(249,115,22,${.4 * gl})`); g.addColorStop(1, 'rgba(249,115,22,0)'); pc.globalCompositeOperation = 'lighter'; pc.fillStyle = g; pc.fillRect(gx - 260, gy - 260, 520, 520); pc.globalCompositeOperation = 'source-over'; }
-    } else {                                                     // c) whip-spin through the real angles, d) S Pen
-      const steps = [['s26_back', 9.5], ['s26_bl30', 9.62], ['s26_side', 9.8], ['s26_fl30', 9.98], ['s26_front', 10.16]];
-      let k = 0; while (k < steps.length - 1 && t >= steps[k + 1][1]) k++;
-      const [nm, t0] = steps[k];
-      const settle = nm === 's26_front' ? eOutExpo(prog(t, 10.16, 10.6)) : 0;
-      const spin = k < 4 ? 1 : 1 - settle;                       // motion blur while spinning
-      const xoff = k < 4 ? lerp(70, -70, prog(t, t0, t0 + .18)) : lerp(-70, 0, settle);
-      const pull = 1 - eInExpo(prog(t, 11.7, 12.0));
-      const isFront = nm === 's26_front';
-      if (isFront) {                                             // S Pen leaves its silo (bottom-left)
-        const pen = A.s26_spen.img, PU = .893, pl = pen.height * PU, pw = pen.width * PU;
-        const ph = 1400 * PU, pbottom = CY + ph / 2 - 8, px = CX - 671 * PU / 2 + 671 * PU * .14 + xoff;
-        const ext = eOutCubic(prog(t, 10.6, 11.3)) * .6 * pl;
-        pc.save(); pc.beginPath(); pc.rect(px - 40, pbottom, 80, 900); pc.clip();
-        pc.translate(px, pbottom - pl + ext + pl / 2); pc.scale(1, -1); pc.globalAlpha = 1; pc.drawImage(pen, -pw / 2, -pl / 2, pw, pl); pc.restore();
-      }
-      drawPhone(A[nm], { cx: CX + xoff - (1 - pull) * 1300, cy: CY, U: .893, mbx: spin * 180 + (1 - pull) * 300, rimL: isFront ? .8 : .9, rimR: isFront ? .9 : .4, glow: .8, glowSide: isFront ? 1 : -1, sweep: isFront ? prog(t, 10.5, 11.3) : -1, sweepAng: 120 });
+      drawPhone(img, { cx: Fs[0] - (F[0] - C[0]) * sc, cy: Fs[1] - (F[1] - C[1]) * sc, U: sc, sweep: prog(t, 9.2, 9.65), sweepA: .35, sweepAng: 70, glow: .6, glowSide: -1 });
+      const gl = pulse(t, 9.3, .06, .25);
+      if (gl > .01) { const gxx = Fs[0] + (240 - F[0]) * sc, gyy = Fs[1] + (470 - F[1]) * sc; const g = pc.createRadialGradient(gxx, gyy, 0, gxx, gyy, 260); g.addColorStop(0, `rgba(255,236,220,${.9 * gl})`); g.addColorStop(.2, `rgba(249,115,22,${.4 * gl})`); g.addColorStop(1, 'rgba(249,115,22,0)'); pc.globalCompositeOperation = 'lighter'; pc.fillStyle = g; pc.fillRect(gxx - 260, gyy - 260, 520, 520); pc.globalCompositeOperation = 'source-over'; }
+    } else if (t < 10.7) {                                       // c) REAL close-up rotation (Samsung design film)
+      const im = svCache.get('sv_mac' + (1 + clamp(Math.floor((t - 9.7) * 30), 0, 29)));
+      const sc = lerp(1.28, 1.36, prog(t, 9.7, 10.7));
+      // source phone centre ≈ (915, 540) in the 1920×1080 frame
+      drawPhone({ img: im, dyn: true, sat: .55 }, { cx: 540 + (960 - 915) * sc, cy: 900, U: sc, rimL: .9, rimR: .35, glow: .6, glowSide: -1, sweep: prog(t, 9.9, 10.6), sweepA: .3 });
+      const fg = pc.createLinearGradient(0, 1300, 0, 1700); fg.addColorStop(0, 'rgba(10,10,10,0)'); fg.addColorStop(1, 'rgba(10,10,10,1)'); pc.fillStyle = fg; pc.fillRect(0, 1300, W, 620);
+    } else {                                                     // d) front + S Pen leaving its silo — one rigid group
+      const settle = eOutExpo(prog(t, 10.7, 11.1)), U = .893, CX = 540 + gx, CY = 930 + (1 - settle) * 40;
+      const pen = A.s26_spen.img, pl = pen.height * U, pw = pen.width * U;
+      const pbottom = CY + 1400 * U / 2 - 8, px = CX - 671 * U / 2 + 671 * U * .14;
+      const ext = eOutCubic(prog(t, 10.9, 11.45)) * .6 * pl;
+      pc.save(); pc.globalAlpha = settle; pc.beginPath(); pc.rect(px - 40 - gmb, pbottom, 80 + gmb * 2, 900); pc.clip();
+      const NP = gmb > 2 ? 10 : 1;
+      for (let i = 0; i < NP; i++) { const k = NP === 1 ? 0 : (i / (NP - 1) - .5) * gmb; pc.globalAlpha = settle * (NP === 1 ? 1 : 1.6 / NP); pc.save(); pc.translate(px + k, pbottom - pl + ext + pl / 2); pc.scale(1, -1); pc.drawImage(pen, -pw / 2, -pl / 2, pw, pl); pc.restore(); }
+      pc.restore();
+      drawPhone(A.s26_front, { cx: CX, cy: CY, U, alpha: settle, mbx: gmb, rimL: .8, rimR: .9, glow: .8, glowSide: 1, sweep: prog(t, 10.75, 11.5), sweepAng: 120 });
     }
-    const ts = $('tSs'); if (t >= 7.6) { const a = slam(t, 7.6, .25, 1.8); set(ts, mix(a, { y: 0 }, t >= 8.2 && t < 9.5 ? { op: 0 } : {}, { x: -eInExpo(prog(t, 11.7, 12.0)) * 1300 })); }
+    const ts = $('tSs'); if (t >= 7.3) { const a = slam(t, 7.3, .25, 1.8); set(ts, mix(a, t >= 8.7 && t < 10.7 ? { op: 0 } : {}, { x: gx, blur: exit * 20 })); }
     glow = .5; glowY = 330;
   }
 
   // ---------------- DUEL 12–17 ----------------
   if (t >= 12.0 && t < 17.05) {
-    const ein = prog(t, 12.0, 12.45), e = eInCubic(ein);           // accelerate into the clash
-    const th = Math.PI * eInOutCubic(prog(t, 12.7, 14.7));       // orbit: the pair rotates around the frame centre
-    const R = 280, depthI = -Math.sin(th), depthS = Math.sin(th);
-    const pos = (base, ph, depth) => ({ x: 540 + R * Math.cos(ph), s: 1 + .1 * depth, b: .82 + .18 * depth });
-    const pI = pos(0, Math.PI + th, depthI), pS = pos(0, th, depthS);
-    const push = eInExpo(prog(t, 16.3, 17.0));
-    const hitL = Math.max(pulse(t, 15.0, .02, .25), pulse(t, 16.0, .02, .3)), hitR = Math.max(pulse(t, 15.5, .02, .25), pulse(t, 16.0, .02, .3));
-    const yI = 1430 - 1284 * .77 / 2, yS = 1430 - 1400 * .77 / 2;
-    const drawI = () => drawPhone(A.ip17_back, { cx: lerp(-500, pI.x, e) , cy: yI, U: .77 * pI.s * (1 + push * .6), rot: -4 * (1 - th / Math.PI) + 4 * th / Math.PI, mbx: (1 - ein) * 260 * (ein > 0 ? 1 : 0), rimL: .7 + hitL, rimR: .25, bright: pI.b, glow: .6 + hitL, glowSide: -1, sweep: prog(t, 15.0, 15.6), sweepA: .4, alpha: 1 - push * .9 });
-    const drawS = () => drawPhone(A.s26_back, { cx: lerp(1580, pS.x, e), cy: yS, U: .77 * pS.s * (1 + push * .6), rot: 4 * (1 - th / Math.PI) - 4 * th / Math.PI, mbx: (1 - ein) * 260 * (ein > 0 ? 1 : 0), rimR: .7 + hitR, rimL: .25, bright: pS.b, glow: .6 + hitR, glowSide: 1, sweep: prog(t, 15.5, 16.1), sweepA: .4, alpha: 1 - push * .9 });
-    if (depthI > depthS) { drawS(); drawI(); } else { drawI(); drawS(); }
-    streak('st3', t, 12.4, .22, { y: 900, rot: 90, w: 1.4 });     // vertical light slash at the clash
-    set($('dA'), mix(slam(t, 13.0, .22, 2.2), outQ(t, 16.55)));
-    set($('dB'), mix(slam(t, 14.0, .22, 2.4), outQ(t, 16.6)));
-    glow = .6 + .3 * Math.max(hitL, hitR); glowY = 330;
+    const wipeX = lerp(-200, 1280, eInOutCubic(prog(t, 13.85, 14.3)));   // light bar that turns the split into the line-up
+    if (t < 14.3) {                                              // split screen: both REAL footages, divided by an orange light blade
+      const g = eOutExpo(prog(t, 12.0, 12.3));
+      const P = [[700, 0], [380, 1920]];                         // blade from top-right to bottom-left
+      const drawSide = (left) => {
+        pc.save(); pc.beginPath();
+        if (left) { pc.moveTo(0, 0); pc.lineTo(P[0][0], 0); pc.lineTo(P[1][0], 1920); pc.lineTo(0, 1920); }
+        else { pc.moveTo(P[0][0], 0); pc.lineTo(W, 0); pc.lineTo(W, 1920); pc.lineTo(P[1][0], 1920); }
+        pc.closePath(); pc.clip();
+        if (t >= 13.85) { pc.beginPath(); pc.rect(wipeX, 0, W, H); pc.clip(); }
+        if (left) {
+          const f0 = clamp(Math.round((4.9 + (t - 12.0) - 2.0) * 30), 0, IPN - 1), im = ipCache.get(f0);
+          const sc = lerp(1.0, 1.05, prog(t, 12, 14.3)); pc.globalAlpha = g;
+          pc.drawImage(im, 300 - 960 * sc, 360 + (1 - g) * 120, 1920 * sc, 1080 * sc);
+          const fg = pc.createLinearGradient(0, 1150, 0, 1480); fg.addColorStop(0, 'rgba(10,10,10,0)'); fg.addColorStop(1, 'rgba(10,10,10,1)'); pc.fillStyle = fg; pc.globalAlpha = 1; pc.fillRect(0, 1150, W, 800);
+        } else {
+          const im = svCache.get('sv_rot' + (58 - clamp(Math.floor((t - 12.0) * 30), 0, 50)));
+          drawPhone({ img: im, dyn: true, sat: .55 }, { cx: 800, cy: 1000 - (1 - g) * 120, U: lerp(.98, 1.03, prog(t, 12, 14.3)), alpha: g, rimR: .9, rimL: .3, glow: .7, glowSide: 1 });
+        }
+        pc.restore();
+      };
+      drawSide(true); drawSide(false);
+      // the blade
+      const len = eOutExpo(prog(t, 12.0, 12.25)), pul = Math.max(pulse(t, 13.0, .02, .3), pulse(t, 13.5, .02, .3));
+      const mx = (P[0][0] + P[1][0]) / 2, my = 960, dx = (P[1][0] - P[0][0]) / 2 * len, dy = 960 * len;
+      pc.save(); pc.globalCompositeOperation = 'lighter'; pc.lineCap = 'round';
+      for (const [wd, c] of [[46, 'rgba(196,90,53,.18)'], [18, 'rgba(249,115,22,.45)'], [5, 'rgba(255,190,140,.9)'], [2, 'rgba(255,245,235,1)']]) {
+        pc.strokeStyle = c; pc.lineWidth = wd * (1 + pul * .6); pc.globalAlpha = t >= 13.85 ? 1 - prog(t, 13.85, 14.1) : 1;
+        pc.beginPath(); pc.moveTo(mx - dx, my - dy); pc.lineTo(mx + dx, my + dy); pc.stroke();
+      }
+      pc.restore();
+    }
+    if (t >= 13.85) {                                            // the line-up: both official stills, calm continuous drift
+      const k = eInOutSine(prog(t, 14.0, 16.4)), push = eInExpo(prog(t, 16.4, 17.0));
+      const hitL = Math.max(pulse(t, 15.0, .02, .3), pulse(t, 16.0, .02, .35)), hitR = Math.max(pulse(t, 15.5, .02, .3), pulse(t, 16.0, .02, .35));
+      const zoom = (1 + .07 * k) * (1 + push * .5), U = .77 * zoom;
+      pc.save(); if (t < 14.3) { pc.beginPath(); pc.rect(0, 0, wipeX, H); pc.clip(); }
+      const yI = 900 + (1284 * .77 - 1400 * .77) / 2 + 30, yS = 900;
+      drawPhone(A.ip17_back, { cx: 540 - (245 + 14 * k) * zoom, cy: yI + Math.sin(t * 1.3) * 6, U, rot: -3 + 1.2 * k, rimL: .7 + hitL, rimR: .2, glow: .6 + hitL, glowSide: -1, sweep: prog(t, 15.0, 15.7), sweepA: .4, alpha: 1 - push });
+      drawPhone(A.s26_back, { cx: 540 + (245 + 14 * k) * zoom, cy: yS - Math.sin(t * 1.3) * 6, U, rot: 3 - 1.2 * k, rimR: .7 + hitR, rimL: .2, glow: .6 + hitR, glowSide: 1, sweep: prog(t, 15.5, 16.2), sweepA: .4, alpha: 1 - push });
+      pc.restore();
+      // the travelling light bar itself
+      if (t < 14.35) { const bx = wipeX; const g2 = pc.createLinearGradient(bx - 120, 0, bx + 120, 0); g2.addColorStop(0, 'rgba(249,115,22,0)'); g2.addColorStop(.5, 'rgba(255,220,190,.9)'); g2.addColorStop(1, 'rgba(249,115,22,0)'); pc.globalCompositeOperation = 'lighter'; pc.fillStyle = g2; pc.fillRect(bx - 120, 0, 240, H); pc.globalCompositeOperation = 'source-over'; }
+    }
+    set($('dA'), mix(slam(t, 12.4, .22, 2.2), outQ(t, 16.45)));
+    set($('dB'), mix(slam(t, 14.3, .22, 2.4), outQ(t, 16.5)));
+    glow = .55; glowY = 330;
   }
 
   // ---------------- CTA 17–24 ----------------
