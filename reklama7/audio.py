@@ -6,7 +6,7 @@ import sys, wave
 import numpy as np
 
 SR = 48000
-DUR = 18.0
+DUR = 22.5
 N = int(SR * DUR)
 rng = np.random.default_rng(777)
 BEAT = 0.5
@@ -303,9 +303,9 @@ def sparkle(length=1.0):
 def spot_thunk():
     t = T(1.2); return np.sin(2 * np.pi * np.cumsum(55 + 40 * np.exp(-t / .05)) / SR) * np.exp(-t / .25) * .8 + hp(noise(len(t)), 1500) * np.exp(-t / .01) * .4
 
-# ------------------------------------------------------------------ music: E minor, 120 BPM
+# ------------------------------------------------------------------ music: E minor, 120 BPM, 22.5 s
 Em = (28, [52, 55, 59, 62, 66]); C = (24, [48, 52, 55, 59, 64]); G = (31, [50, 55, 59, 62, 67]); D = (26, [50, 54, 57, 62, 66])
-chords = [(0, 2.5, Em), (2.5, 4.5, C), (4.5, 6.5, G), (6.5, 8.5, D), (8.5, 10.5, Em), (10.5, 12.5, C), (12.5, 15, G), (15, 18, Em)]
+chords = [(0, 1, Em), (1, 4.5, Em), (4.5, 7, C), (7, 9.5, G), (9.5, 12, D), (12, 14.5, Em), (14.5, 16.5, C), (16.5, 19, G), (19, 22.5, Em)]
 ARP = {id(Em): [64, 67, 71, 74, 76, 74, 71, 67], id(C): [64, 67, 72, 76, 79, 76, 72, 67], id(G): [62, 67, 71, 74, 79, 74, 71, 67], id(D): [62, 66, 69, 74, 78, 74, 69, 66]}
 tt = np.arange(N) / SR
 def root_at(x):
@@ -314,88 +314,105 @@ def root_at(x):
     return 28
 padL = np.zeros(N); padR = np.zeros(N)
 for (a, b, (root, notes)) in chords:
-    st = max(0, a - .03); ln = b - st + .5; t = T(ln)
-    ev = np.minimum(1, t / .2) * np.where(t > b - st, np.exp(-(t - (b - st)) / .2), 1)
+    st = max(0, a - .03); ln = b - st + .6; t = T(ln)
+    ev = np.minimum(1, t / .35) * np.where(t > b - st, np.exp(-(t - (b - st)) / .3), 1)
     for k, m in enumerate(notes):
         s = supersaw(m, ln, 5, .1) * ev * .06; pan = -.6 if k % 2 == 0 else .6
         place(padL, s * np.cos((pan + 1) * np.pi / 4), st); place(padR, s * np.sin((pan + 1) * np.pi / 4), st)
 def pad_cut(x):
-    if x < 2.5: return 700
-    if x < 12.5: return 1800
-    if x < 14.75: return 1200 + 400 * (x - 12.5)
-    if x < 15: return 2200 * 3 ** ((x - 14.75) / .25)
-    return max(1600, 5000 * np.exp(-(x - 15) / 2.5))
+    if x < 1: return 500
+    if x < 16.5: return 1700
+    if x < 18.7: return 1200 + 400 * (x - 16.5)
+    if x < 19: return 2200 * 3 ** ((x - 18.7) / .3)
+    return max(1600, 5000 * np.exp(-(x - 19) / 2.8))
 padL = tvfilt(padL, pad_cut, 'lp'); padR = tvfilt(padR, pad_cut, 'lp')
-pe = np.ones(N); pe[(tt >= 14.95) & (tt < 15.0)] = 0
+pe = np.ones(N); pe[(tt >= 18.94) & (tt < 19.0)] = 0
 musL += padL * pe; musR += padR * pe; revS += (padL + padR) * pe * .15
 K = kick(1.0, .5, 46); CL = clap()
-def kick_at(x, g): add(K, x, g); place(duck, -.6 * np.exp(-T(.4) / .1), x)
-for i in range(int((12.5 - .5) / .5)):                 # main groove
-    x = .5 + i * .5; kick_at(x, .9 if x >= 2.5 else .75)
-    if x >= 2.5 and i % 2 == 1: add(CL, x, .4, rev=.3)
-    if x >= 2.5: add(hat(.02), x + .25, .3, pan=.3)
-    if x >= 6.5: add(hat(.01), x + .125, .14, pan=-.3); add(hat(.01), x + .375, .14, pan=-.3)
-for x in (12.5, 13.5, 14.0): kick_at(x, .7)                 # half-time under the hero shot
-for i in range(int((18 - 15) / .5)):                     # drop
-    x = 15 + i * .5; kick_at(x, 1.0 if i == 0 else .85)
-    if i % 2 == 1: add(CL, x, .45, rev=.3)
-    add(hat(.02), x + .25, .3, pan=.3)
-for i in range(int((18 - .5) / .25)):
-    x = .5 + i * .25
-    if 12.5 <= x < 15 and i % 2: continue
-    if [1, 0, 1, 0, 1, 0, 1, 1][i % 8]: add(b808(root_at(x) + 12, .4, .16), x, .4, music=True)
+def kick_at(x, g): add(K, x, g); place(duck, -.55 * np.exp(-T(.4) / .1), x)
+for i in range(int((16.5 - 1.0) / .5)):
+    x = 1.0 + i * .5; kick_at(x, .7 if x < 4.5 else .85)
+    if x >= 4.5 and i % 2 == 1: add(CL, x, .35, rev=.3)
+    if x >= 4.5: add(hat(.02), x + .25, .26, pan=.3)
+    if x >= 9.5: add(hat(.01), x + .125, .12, pan=-.3); add(hat(.01), x + .375, .12, pan=-.3)
+for x in (16.5, 17.5, 18.0): kick_at(x, .65)
+for i in range(int((22.5 - 19.0) / .5)):
+    x = 19.0 + i * .5; kick_at(x, 1.0 if i == 0 else .8)
+    if i % 2 == 1: add(CL, x, .4, rev=.3)
+    add(hat(.02), x + .25, .26, pan=.3)
+for i in range(int((22.5 - 1.0) / .25)):
+    x = 1.0 + i * .25
+    if 16.5 <= x < 19 and i % 2: continue
+    if [1, 0, 1, 0, 1, 0, 1, 1][i % 8]: add(b808(root_at(x) + 12, .4, .16), x, .36, music=True)
 for (a, b, ch) in chords:
     seq = ARP[id(ch)]
     for i in range(int((b - a) / .125)):
         x = a + i * .125
-        if x < 4.5 or (14.95 <= x < 15) or x > 17.6: continue
-        g = .18 if x < 12.5 else .14 if x < 15 else .22
-        add(pluck(seq[i % 8], .3, 3200), x, g * (1 if i % 4 == 0 else .7), pan=.4 * np.sin(i * .9), rev=.15, dly=.25, music=True)
+        if x < 7.0 or (18.94 <= x < 19) or x > 22.0: continue
+        g = .16 if x < 16.5 else .12 if x < 19 else .2
+        add(pluck(seq[i % 8], .3, 3000), x, g * (1 if i % 4 == 0 else .7), pan=.4 * np.sin(i * .9), rev=.15, dly=.25, music=True)
 
-# ------------------------------------------------------------------ SOUND — one per cut / move
-add(felt_thump(), 0.0, .9); add(tick_hi(5200), 0.0, .6)                              # dot
-add(tonal_sweep(.42, 300, 1400), .05, .6, rev=.3)                                     # ring draws
-add(zap(4800, 300, .3), .25, .8, pan=np.linspace(-.5, .5, int(.3 * SR)), rev=.4)       # asterisk burst
-add(hp(noise(int(.2 * SR)), 2500) * np.exp(-T(.2) / .04) * .4, .25, .6, rev=.3)
-add(snap(), .5, .9, rev=.3); add(tom(150, .4, .12), .5, .6)                            # PRODAJEŠ?
-add(tom(95, .5, .16), .875, .8, rev=.3)                                               # MENJAŠ?
-add(metal(.8, 880, .35), 1.25, .6, rev=.3); add(snap(), 1.25, .5)                      # KUPUJEŠ?
-add(braam(52, 1.2, .6), 1.625, .55, rev=.4); add(boom(1.2, 90, 36, .5, .6), 1.625, .7, rev=.4)   # ZONA
-add(bell(83, 1.4, .7), 1.85, .3, rev=.5)                                              # telefona
-add(boing(.45, 200), 2.0, .7, rev=.2)                                                 # ZONA squash & stretch
-add(whoosh(.45, 400, 5000, .8, 1.1), 2.45, .7, rev=.3); add(glass_sweep(.6, 900, 2600), 2.5, .5, rev=.4)   # iris opens
-for k in range(16): add(tick_hi(2400 + k * 160), 2.7 + k * .0375, .35, pan=np.sin(k), rev=.2)   # orbit dots appear
-add(metal_slide(.5), 2.95, .7, pan=np.linspace(.8, 0, int(.5 * SR)), rev=.3)          # title
-add(reverse_swell(.35), 4.15, .7); add(tick_hi(3200), 4.5, .7)                         # iris closes
-for b, (f0, f1) in zip((4.5, 5.0, 5.5, 6.0), ((2500, 4500), (3000, 5200), (2000, 4000), (3500, 6000))):
-    add(click_cascade(.4, f0, f1, 46), b, .9, pan=np.linspace(-.6, .6, int(.4 * SR)))   # truchet tile waves
-add(whoosh(.45, 300, 3000, .8, 1.0), 4.5, .5, rev=.3)                                  # window opens
-add(snap(), 5.0, .7); add(tom(80, .5, .2), 5.0, .7, rev=.3)                             # STARI ZA NOVI.
-add(line_riser(.3), 6.2, .7)
-add(sparkle(1.0), 6.5, .9, rev=.5)                                                    # particles appear
-add(sub_drop(1.4, 100, 34), 7.0, .8); add(stab([55, 59, 64], .4, 2500), 7.0, .5)        # OTKUPUJEMO
-add(hp(noise(int(.4 * SR)), 1500) * np.exp(-T(.4) / .12) * .5, 7.45, .8, pan=np.linspace(-.8, .8, int(.4 * SR)), rev=.5)   # explode
-add(reverse_swell(.3), 7.85, .7)                                                      # reform
-add(downer(.4), 8.3, .5); add(ui_pop(900), 8.5, .9)                                    # collapse → pop
-for x, notes in ((8.5, [64, 71]), (9.0, [62, 69]), (9.5, [67, 74]), (10.0, [66, 74, 78])):
-    add(stab(notes, .45, 3500), x, .55, rev=.4)                                       # shape morphs
-add(glass_chime([83, 88, 95], 1.6), 10.05, .45, rev=.5)                                # phone fills with the real iPhone
-for x in (8.75, 9.25): add(snap(), x, .6)
-add(whoosh(.25, 600, 5000, .8, 1.0), 10.28, .6, rev=.2)
-for x, notes in ((10.5, [52, 59, 64]), (11.0, [55, 62, 67]), (11.5, [57, 64, 69]), (12.0, [59, 66, 71])):
-    add(stab(notes, .35, 4500), x, .7, rev=.3); add(tom(120 + (x - 10.5) * 40, .3, .1), x, .5)   # BRZO / FER / SIGURNO / LAKO
-add(spot_thunk(), 12.5, .9, rev=.4); add(hum_on(.9), 12.52, .5, rev=.3)                # spotlight switches on
-add(sparkle(2.0), 12.7, .5, rev=.6)                                                   # dust in the beam
-add(metal_slide(.5), 12.95, .6, pan=np.linspace(-.6, 0, int(.5 * SR)), rev=.3)
-add(bell(79, 1.6, .9), 13.3, .3, rev=.6)
-add(line_riser(.6), 14.4, .8, rev=.3)
-add(boom(2.5, 100, 28, 1.0, 1.0), 15.0, 1.0, rev=.6); add(zap(5000, 200, .4), 15.0, .6, rev=.4)   # drop + asterisk
-add(snap(), 15.25, .8); add(tom(70, .5, .2), 15.25, .7, rev=.3)                        # ZONA TELEFONA
-add(stab([64, 71, 76], .5, 4000), 15.75, .7, rev=.4); add(CL, 15.75, .5)              # POŠALJI DM
-add(whoosh(.6, 500, 7000, .75, 1.0), 15.98, .7, pan=np.linspace(-1, .8, int(.6 * SR)), rev=.3)   # paper plane
-add(ui_pop(1400), 16.25, .7, rev=.3); add(ui_pop(1870), 16.33, .6, rev=.3)
-add(bell(88, 1.2, .6), 16.45, .3, rev=.5)
-for k, m in enumerate((76, 83, 88)): add(bell(m, 2.0, 1.2), 16.5 + k * .12, .35, rev=.7, dly=.25)   # sonic signature
+# ------------------------------------------------------------------ SOUND — synced to the new timeline
+def click_cascade(length=.45, f0=3000, f1=6000, n=40):
+    out = np.zeros(int(length * SR))
+    for k in range(n):
+        x = int(((np.sin(k * 127.1 + 311.7) * 43758.5453) % 1) * length * .9 * SR); f = f0 + (f1 - f0) * k / n; t = T(.012)
+        s = np.sin(2 * np.pi * f * t) * np.exp(-t / .002) * .22; out[x:x + len(s)] += s[:len(out) - x]
+    return out
+def sparkle(length=1.0):
+    out = np.zeros(int(length * SR))
+    for k in range(60):
+        x = int(((np.sin((k + 99) * 127.1) * 43758.5) % 1) * length * .85 * SR); t = T(.08); f = 3000 + ((np.sin(k * 7.7) * 4375.5) % 1) * 5000
+        s = np.sin(2 * np.pi * f * t) * np.exp(-t / .02) * .1; out[x:x + len(s)] += s[:len(out) - x]
+    return out
+def spot_thunk():
+    t = T(1.2); return np.sin(2 * np.pi * np.cumsum(55 + 40 * np.exp(-t / .05)) / SR) * np.exp(-t / .25) * .8 + hp(noise(len(t)), 1500) * np.exp(-t / .01) * .4
+def ring_ping(f=880):
+    t = T(1.2); return np.sin(2 * np.pi * f * t) * np.exp(-t / .5) * .12 + np.sin(2 * np.pi * f * 2.01 * t) * np.exp(-t / .2) * .05
+add(felt_thump(), 0.0, .8); add(tick_hi(5200), 0.0, .5)                                 # dot
+for k in range(4): add(ring_ping(660 + k * 110), .1 + k * .17, .5, rev=.6)               # zone rings
+add(reverse_swell(.25), .78, .6); add(boom(1.0, 90, 40, .4, .5), 1.0, .6, rev=.3)       # dot → orange field
+add(whoosh(.4, 600, 4500, .8, 1.0), .8, .4, rev=.2)
+for x, f in ((1.0, 150), (1.75, 110), (2.5, 180)):                                       # hook words: each wipe + slam
+    add(whoosh(.35, 400, 3500, .85, 1.0), x - .3, .45, rev=.2); add(tom(f, .5, .15), x, .7, rev=.3); add(snap(), x, .5)
+for x in (1.45, 2.2, 2.95): add(tvfilt(noise(int(.3 * SR)), lambda z: 3000 - 2000 * z / .3, 'bp', 1.0) * np.linspace(1, 0, int(.3 * SR)) * .25, x, .5)   # word exits (air out)
+add(braam(52, 1.4, .7), 3.25, .55, rev=.4); add(boom(1.2, 90, 36, .5, .6), 3.25, .6, rev=.4)   # ZONA
+add(bell(83, 1.4, .7), 3.55, .3, rev=.5)                                                # telefona
+add(tonal_sweep(.65, 300, 140), 3.75, .45); add(tonal_sweep(.35, 140, 320), 4.05, .45)   # ZONA squash & stretch
+add(whoosh(.6, 300, 5000, .8, 1.1), 4.4, .6, rev=.3); add(glass_sweep(.7, 900, 2600), 4.5, .45, rev=.4)   # iris opens
+for k in range(16): add(tick_hi(2400 + k * 140), 4.8 + k * .045, .3, pan=np.sin(k), rev=.2)   # orbit dots
+add(metal_slide(.55), 5.05, .6, pan=np.linspace(.8, 0, int(.55 * SR)), rev=.3)           # title
+add(reverse_swell(.4), 6.6, .6); add(tick_hi(3200), 7.0, .6)                             # iris closes
+for b, (f0, f1) in zip((7.0, 7.75, 8.5, 9.0), ((2500, 4500), (3000, 5200), (2000, 4000), (3500, 6000))):
+    add(click_cascade(.55, f0, f1, 46), b, .85, pan=np.linspace(-.6, .6, int(.55 * SR)))   # truchet waves
+add(whoosh(.55, 300, 3000, .8, 1.0), 7.0, .45, rev=.3)                                   # window opens
+add(snap(), 7.7, .6); add(tom(80, .5, .2), 7.7, .7, rev=.3)                               # STARI ZA NOVI.
+add(line_riser(.35), 9.15, .6)
+add(sparkle(1.4), 9.5, .9, rev=.5)                                                      # particles
+add(sub_drop(1.4, 100, 34), 9.95, .7); add(stab([55, 59, 64], .4, 2500), 9.95, .45)       # OTKUPUJEMO
+add(hp(noise(int(.45 * SR)), 1500) * np.exp(-T(.45) / .14) * .5, 10.6, .7, pan=np.linspace(-.8, .8, int(.45 * SR)), rev=.5)   # explode
+add(reverse_swell(.35), 11.05, .6)                                                      # reform
+add(downer(.4), 11.7, .45); add(ui_pop(900), 12.0, .8)                                    # collapse → pop
+for x, notes in ((12.0, [64, 71]), (12.6, [62, 69]), (13.2, [67, 74]), (13.8, [66, 74, 78])):
+    add(stab(notes, .5, 3500), x, .5, rev=.4)                                            # shape morphs
+add(glass_chime([83, 88, 95], 1.6), 13.9, .4, rev=.5)
+for x in (12.6, 13.2, 13.8): add(snap(), x, .45)
+add(whoosh(.35, 600, 5000, .8, 1.0), 14.15, .5, rev=.2)
+for x, notes in ((14.5, [52, 59, 64]), (15.15, [55, 62, 67]), (15.8, [57, 64, 69])):
+    add(whoosh(.3, 500, 4000, .85, 1.0), x - .25, .35, rev=.2); add(stab(notes, .4, 4500), x, .65, rev=.3); add(tom(120 + (x - 14.5) * 40, .3, .1), x, .45)
+add(spot_thunk(), 16.5, .85, rev=.4); add(hum_on(.9), 16.52, .45, rev=.3)                 # spotlight
+add(sparkle(2.2), 16.7, .45, rev=.6)
+add(metal_slide(.55), 17.0, .55, pan=np.linspace(-.6, 0, int(.55 * SR)), rev=.3)
+add(bell(79, 1.6, .9), 17.35, .28, rev=.6)
+add(line_riser(.6), 18.4, .7, rev=.3)
+add(boom(2.5, 100, 28, 1.0, .8), 19.0, .9, rev=.6); add(whoosh(.5, 300, 5000, .7, 1.2), 18.75, .5, rev=.3)   # CTA opens
+for k in range(3): add(ring_ping(880 + k * 220), 19.3 + k * .15, .5, rev=.6)               # zone rings (brand)
+add(snap(), 19.3, .7); add(tom(70, .5, .2), 19.3, .7, rev=.3)                              # ZONA TELEFONA
+add(stab([64, 71, 76], .5, 4000), 19.8, .65, rev=.4); add(CL, 19.8, .45)                  # POŠALJI DM
+add(whoosh(.75, 500, 7000, .75, 1.0), 20.03, .65, pan=np.linspace(-1, .8, int(.75 * SR)), rev=.3)   # paper plane
+add(ui_pop(1400), 20.35, .65, rev=.3); add(ui_pop(1870), 20.43, .55, rev=.3)
+add(bell(88, 1.2, .6), 20.55, .28, rev=.5)
+for k, m in enumerate((76, 83, 88)): add(bell(m, 2.0, 1.2), 21.0 + k * .12, .32, rev=.7, dly=.25)   # sonic signature
 
 # ------------------------------------------------------------------ mix
 duck = np.clip(duck, .3, 1); musL *= duck; musR *= duck
@@ -416,7 +433,7 @@ rs = hp(revS, 200); L += conv(rs, ir()) * .4; R += conv(rs, ir()) * .4
 L = hp(L, 28); R = hp(R, 28); L = L + hp(L, 2500) * .15; R = R + hp(R, 2500) * .15
 m = max(np.max(np.abs(L)), np.max(np.abs(R))); L /= m; R /= m
 drive = 2.0; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
-fade = np.ones(N); sel = tt > 17.4; fade[sel] = np.cos(np.clip((tt[sel] - 17.4) / .6, 0, 1) * np.pi / 2) ** 2
+fade = np.ones(N); sel = tt > 21.9; fade[sel] = np.cos(np.clip((tt[sel] - 21.9) / .6, 0, 1) * np.pi / 2) ** 2
 fade[:120] = np.linspace(0, 1, 120); L *= fade; R *= fade
 pk = max(np.max(np.abs(L)), np.max(np.abs(R))); L *= .89 / pk; R *= .89 / pk
 out = np.stack([L, R], 1)

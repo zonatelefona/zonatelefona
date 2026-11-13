@@ -217,10 +217,10 @@ function buildHero() {
   const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3));
   dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xffd9c4, size: .012, transparent: true, opacity: .7, blending: THREE.AdditiveBlending, depthWrite: false }));
   hero.add(dust);
-  // rotating asterisk behind the phones
+  // concentric 'zone' rings behind the phones (brand motif, replaces the asterisk)
   burstCanvas = document.createElement('canvas'); burstCanvas.width = burstCanvas.height = 1024;
-  const bc = burstCanvas.getContext('2d'); bc.strokeStyle = OR; bc.lineCap = 'round'; bc.lineWidth = 26; bc.translate(512, 512);
-  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, l = i % 2 ? 380 : 470; bc.beginPath(); bc.moveTo(Math.cos(a) * 60, Math.sin(a) * 60); bc.lineTo(Math.cos(a) * l, Math.sin(a) * l); bc.stroke(); }
+  const bc = burstCanvas.getContext('2d'); bc.strokeStyle = OR; bc.translate(512, 512);
+  for (let i = 0; i < 6; i++) { bc.lineWidth = 10 - i; bc.globalAlpha = 1 - i * .13; bc.beginPath(); bc.arc(0, 0, 150 + i * 62, 0, Math.PI * 2); bc.stroke(); }
   burstTex = new THREE.CanvasTexture(burstCanvas); burstTex.colorSpace = THREE.SRGBColorSpace;
   burstMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: burstTex, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
   burstMesh.position.set(0, .2, -1.6); hero.add(burstMesh);
@@ -233,187 +233,212 @@ function measure(el, wdth, wght) {
   sp.style.cssText = `position:absolute;left:0;top:0;visibility:hidden;white-space:nowrap;font-size:100px;--wdth:${wdth};--wght:${wght}`;
   document.body.appendChild(sp); const w = sp.getBoundingClientRect().width; sp.remove(); return w;
 }
-function fitText(el, width, wdth = 150, wght = 900) { el.style.fontSize = (100 * width / measure(el, wdth, wght)).toFixed(1) + 'px'; }
+function fitText(el, width, wdth = 100, wght = 900) { el.style.fontSize = (100 * width / measure(el, wdth, wght)).toFixed(1) + 'px'; }
 function place(el, top, color, size) { el.style.top = top + 'px'; if (color) el.style.color = color; if (size) el.style.fontSize = size + 'px'; }
-// a heavy word that SNAPS in with a width/weight morph and leaves at `out`
-function snapWord(id, t0, out, { from = 'up', color = INK, top = 820, width = 980, wd0 = 50, wd1 = 100 } = {}) {
+// heavy word: smooth IN (width/weight morph + rise) and smooth OUT (squeeze + lift + fade)
+function word(id, tIn, tOut, { color = INK, top = 820, width = 960, wd1 = 100, from = 'up', inDur = .55, outDur = .32 } = {}) {
   const el = $(id); fitText(el, width, wd1); place(el, top, color);
-  const y0 = from === 'up' ? 120 : from === 'down' ? -120 : 0, x0 = from === 'left' ? -500 : from === 'right' ? 500 : 0;
-  tl.set(el, { autoAlpha: 0, '--wdth': wd0, '--wght': 300, y: y0, x: x0, skewX: from === 'left' ? -18 : from === 'right' ? 18 : 0, rotationX: 0 }, 0);
-  tl.set(el, { autoAlpha: 1 }, t0);
-  tl.to(el, { '--wdth': wd1, '--wght': 900, y: 0, x: 0, skewX: 0, duration: .32, ease: 'expo.out' }, t0);
-  if (out !== undefined) tl.set(el, { autoAlpha: 0 }, out);
+  const y0 = from === 'up' ? 110 : from === 'down' ? -110 : 0, x0 = from === 'left' ? -380 : from === 'right' ? 380 : 0;
+  tl.set(el, { autoAlpha: 0, '--wdth': 50, '--wght': 300, y: y0, x: x0, scale: 1 }, 0);
+  tl.to(el, { autoAlpha: 1, duration: .2, ease: 'power1.out' }, tIn);
+  tl.to(el, { '--wdth': wd1, '--wght': 900, y: 0, x: 0, duration: inDur, ease: 'expo.out' }, tIn);
+  if (tOut !== undefined) tl.to(el, { '--wdth': Math.max(50, wd1 - 45), '--wght': 500, y: -70, autoAlpha: 0, duration: outDur, ease: 'power3.in' }, tOut - outDur);
+  return el;
+}
+function soft(id, tIn, tOut, { top, color, size, y = 30 } = {}) {
+  const el = $(id); place(el, top, color, size);
+  tl.set(el, { autoAlpha: 0, y }, 0).to(el, { autoAlpha: 1, y: 0, duration: .5, ease: 'expo.out' }, tIn);
+  if (tOut !== undefined) tl.to(el, { autoAlpha: 0, y: -y, duration: .3, ease: 'power2.in' }, tOut - .3);
   return el;
 }
 function buildType() {
-  // ---------------- HOOK (0.5–2.5)
-  snapWord('w1', .5, .875, { from: 'up' });
-  snapWord('w2', .875, 1.25, { from: 'left', color: OR });
-  snapWord('w3', 1.25, 1.625, { from: 'right' });
-  const w4 = snapWord('w4', 1.625, 2.5, { from: 'down', top: 620, width: 940 });
-  tl.to(w4, { '--wdth': 58, '--wght': 700, duration: .22, ease: 'power3.inOut' }, 2.0).to(w4, { '--wdth': 100, '--wght': 900, duration: .2, ease: 'back.out(3)' }, 2.22);
-  const w4s = $('w4s'); place(w4s, 1010, INK, 130); tl.set(w4s, { autoAlpha: 0, y: 30 }, 0).to(w4s, { autoAlpha: 1, y: 0, duration: .4, ease: 'expo.out' }, 1.85).set(w4s, { autoAlpha: 0 }, 2.5);
-  // ---------------- S2 camera reveal (2.5–4.5)
-  const m2 = $('m2'); place(m2, 230, CREAM); tl.set(m2, { autoAlpha: 0 }, 0).set(m2, { autoAlpha: 1 }, 2.7).set(m2, { autoAlpha: 0 }, 4.25);
-  const t2 = $('t2'); fitText(t2, 900, 150, 800); place(t2, 1490, CREAM);
-  tl.set(t2, { autoAlpha: 0, '--wdth': 50, y: 40 }, 0).set(t2, { autoAlpha: 1 }, 2.95).to(t2, { '--wdth': 150, y: 0, duration: .45, ease: 'expo.out' }, 2.95).to(t2, { autoAlpha: 0, y: -40, duration: .2, ease: 'power2.in' }, 4.2);
-  const m2b = $('m2b'); place(m2b, 1650, OR); tl.set(m2b, { autoAlpha: 0 }, 0).to(m2b, { autoAlpha: 1, duration: .25 }, 3.25).set(m2b, { autoAlpha: 0 }, 4.25);
-  // ---------------- S3 truchet + window (4.5–6.5)
-  const m3 = $('m3'); place(m3, 150, CREAM); tl.set(m3, { autoAlpha: 0 }, 0).set(m3, { autoAlpha: 1 }, 4.75).set(m3, { autoAlpha: 0 }, 6.3);
-  const t3 = $('t3'); fitText(t3, 960); place(t3, 1500, CREAM);
-  tl.set(t3, { autoAlpha: 0, '--wdth': 50, '--wght': 400, scaleY: 1.6 }, 0).set(t3, { autoAlpha: 1 }, 5.0).to(t3, { '--wdth': 150, '--wght': 900, scaleY: 1, duration: .35, ease: 'expo.out' }, 5.0).set(t3, { autoAlpha: 0 }, 6.3);
-  // ---------------- S4 particles (6.5–8.5)
-  const m4 = $('m4'); place(m4, 150, CREAM); tl.set(m4, { autoAlpha: 0 }, 0).set(m4, { autoAlpha: 1 }, 6.7).set(m4, { autoAlpha: 0 }, 8.35);
-  const t4 = $('t4'); fitText(t4, 960); place(t4, 1460, CREAM);
-  tl.set(t4, { autoAlpha: 0, '--wdth': 50, letterSpacing: '0.3em' }, 0).set(t4, { autoAlpha: 1 }, 7.0).to(t4, { '--wdth': 150, letterSpacing: '0em', duration: .5, ease: 'expo.out' }, 7.0)
-    .to(t4, { '--wght': 200, duration: .25, ease: 'power2.inOut' }, 7.75).to(t4, { '--wght': 900, duration: .25, ease: 'back.out(2)' }, 8.0).set(t4, { autoAlpha: 0 }, 8.4);
-  const t4s = $('t4s'); place(t4s, 1600, OR, 84); tl.set(t4s, { autoAlpha: 0, y: 30 }, 0).to(t4s, { autoAlpha: 1, y: 0, duration: .4, ease: 'expo.out' }, 7.3).set(t4s, { autoAlpha: 0 }, 8.4);
-  // ---------------- S5 shape morph words (8.5–10.5)
-  for (const [id, t0, t1] of [['t5a', 8.75, 9.25], ['t5b', 9.25, 10.0], ['t5c', 10.0, 10.5]]) snapWord(id, t0, t1, { top: 1520, width: 760, from: 'up' });
-  // ---------------- S6 big words (10.5–12.5)
-  snapWord('t6a', 10.5, 11.0, { from: 'left', top: 760, width: 1000 });
-  snapWord('t6b', 11.0, 11.5, { from: 'up', top: 760, width: 900 });
-  snapWord('t6c', 11.5, 12.0, { from: 'right', top: 790, width: 1000, color: OR });
-  snapWord('t6d', 12.0, 12.5, { from: 'down', top: 760, width: 940 });
-  // ---------------- S7 hero (12.5–15)
-  const t7 = $('t7'); fitText(t7, 900, 150, 800); place(t7, 1530, CREAM);
-  tl.set(t7, { autoAlpha: 0, '--wdth': 50, y: 50 }, 0).set(t7, { autoAlpha: 1 }, 12.95).to(t7, { '--wdth': 150, y: 0, duration: .5, ease: 'expo.out' }, 12.95).to(t7, { autoAlpha: 0, duration: .15 }, 14.85);
-  const t7s = $('t7s'); place(t7s, 1680, OR, 80); tl.set(t7s, { autoAlpha: 0, y: 30 }, 0).to(t7s, { autoAlpha: 1, y: 0, duration: .45, ease: 'expo.out' }, 13.3).to(t7s, { autoAlpha: 0, duration: .15 }, 14.85);
-  // ---------------- S8 CTA (15–18)
-  const c1 = snapWord('c1', 15.25, undefined, { top: 880, width: 1000, from: 'up', wd1: 72 });
-  const c2 = $('c2'); fitText(c2, 760); place(c2, 1132, CREAM);
-  tl.set(c2, { autoAlpha: 0, '--wdth': 50, scale: 1.4 }, 0).set(c2, { autoAlpha: 1 }, 15.75).to(c2, { '--wdth': 150, scale: 1, duration: .35, ease: 'expo.out' }, 15.75);
-  for (const b of [16.5, 17.0, 17.5]) tl.to(c2, { scale: 1.06, duration: .06, ease: 'power2.out' }, b).to(c2, { scale: 1, duration: .3, ease: 'expo.out' }, b + .06);
-  const c3 = $('c3'); place(c3, 1355, INK, 50); tl.set(c3, { autoAlpha: 0, y: 20 }, 0).to(c3, { autoAlpha: 1, y: 0, duration: .35, ease: 'expo.out' }, 16.25);
-  const c4 = $('c4'); place(c4, 1440, INK, 64); tl.set(c4, { autoAlpha: 0, y: 20 }, 0).to(c4, { autoAlpha: 1, y: 0, duration: .4, ease: 'expo.out' }, 16.45);
-  tl.set([c1, c2, c3, c4], { autoAlpha: 1 }, 17.99);
-  const pl = $('plane'); pl.style.top = '1150px'; pl.style.left = '0px';
-  tl.set(pl, { autoAlpha: 0, x: -200, y: 120, rotation: -20 }, 0).set(pl, { autoAlpha: 1 }, 16.0)
-    .to(pl, { x: 870, y: -175, rotation: 8, duration: .55, ease: 'power3.out' }, 16.0)
-    .to(pl, { y: -190, duration: .5, ease: 'sine.inOut', yoyo: true, repeat: 2 }, 16.6);
-  // everything hidden on t ≤ 0
-  tl.set({}, {}, 18.0);
+  // HOOK — one word per 0.75 s
+  word('w1', 1.0, 1.75, { top: 800 });
+  word('w2', 1.75, 2.5, { top: 800, color: OR, from: 'left' });
+  word('w3', 2.5, 3.25, { top: 800, from: 'right' });
+  const w4 = word('w4', 3.25, 4.5, { top: 640, width: 900 });
+  tl.to(w4, { '--wdth': 62, '--wght': 650, duration: .3, ease: 'power3.inOut' }, 3.75).to(w4, { '--wdth': 100, '--wght': 900, duration: .35, ease: 'back.out(2.2)' }, 4.05);
+  soft('w4s', 3.55, 4.5, { top: 990, color: INK, size: 130 });
+  // S2 iPhone reveal
+  soft('m2', 4.85, 6.75, { top: 200, color: CREAM, y: 12 });
+  const t2 = word('t2', 5.05, 6.8, { top: 1520, width: 860, color: CREAM, wd1: 120 });
+  soft('m2b', 5.4, 6.8, { top: 1680, color: OR, y: 12 });
+  // S3 truchet + window
+  soft('m3', 7.3, 9.3, { top: 150, color: CREAM, y: 12 });
+  word('t3', 7.7, 9.3, { top: 1500, width: 940, color: CREAM });
+  // S4 particles
+  soft('m4', 9.7, 11.8, { top: 150, color: CREAM, y: 12 });
+  const t4 = word('t4', 9.95, 11.8, { top: 1480, width: 940, color: CREAM });
+  tl.to(t4, { '--wght': 250, duration: .3, ease: 'power2.inOut' }, 10.6).to(t4, { '--wght': 900, duration: .35, ease: 'back.out(2)' }, 10.95);
+  soft('t4s', 10.3, 11.8, { top: 1620, color: OR, size: 84 });
+  // S5 shape morph words
+  word('t5a', 12.6, 13.2, { top: 1540, width: 700 });
+  word('t5b', 13.2, 13.8, { top: 1540, width: 700 });
+  word('t5c', 13.8, 14.4, { top: 1540, width: 700 });
+  // S6 big words
+  word('t6a', 14.5, 15.15, { top: 760, width: 960, from: 'left' });
+  word('t6b', 15.15, 15.8, { top: 760, width: 820 });
+  word('t6c', 15.8, 16.5, { top: 790, width: 960, color: OR, from: 'right' });
+  // S7 hero
+  word('t7', 17.0, 18.85, { top: 1560, width: 860, color: CREAM, wd1: 120 });
+  soft('t7s', 17.35, 18.85, { top: 1700, color: OR, size: 80 });
+  // S8 CTA
+  word('c1', 19.3, undefined, { top: 820, width: 980, wd1: 72 });
+  const c2 = $('c2'); fitText(c2, 740); place(c2, 1060, CREAM);
+  tl.set(c2, { autoAlpha: 0, '--wdth': 50, scale: 1.25 }, 0).to(c2, { autoAlpha: 1, duration: .2 }, 19.8).to(c2, { '--wdth': 100, scale: 1, duration: .5, ease: 'expo.out' }, 19.8);
+  for (const b of [21.0, 21.5, 22.0]) tl.to(c2, { scale: 1.04, duration: .08, ease: 'power2.out' }, b).to(c2, { scale: 1, duration: .35, ease: 'expo.out' }, b + .08);
+  soft('c3', 20.35, undefined, { top: 1290, color: INK, size: 52 });
+  soft('c4', 20.55, undefined, { top: 1375, color: INK, size: 66 });
+  const pl = $('plane'); pl.style.top = '1130px'; pl.style.left = '0px';
+  tl.set(pl, { autoAlpha: 0, x: -200, y: 140, rotation: -20 }, 0).set(pl, { autoAlpha: 1 }, 20.05)
+    .to(pl, { x: 860, y: -190, rotation: 8, duration: .7, ease: 'power3.out' }, 20.05)
+    .to(pl, { y: -205, duration: .6, ease: 'sine.inOut', yoyo: true, repeat: 2 }, 20.8);
+  tl.set({}, {}, DUR);
 }
+const DUR = 22.5;
 
-// ================================================================== frame
+// ================================================================== frame helpers
 const fxc = $('fx').getContext('2d');
 const grains = [0, 1, 2, 3].map(k => { const d = fxc.createImageData(540, 960); for (let i = 0; i < d.data.length; i += 4) { const v = hash(i * .013 + k * 91.7) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } return d; });
 const glEl = $('gl');
+// colour fields that WIPE in (bottom / top alternately) instead of hard-cutting
+function fields(t, list) {
+  let i = 0; while (i < list.length - 1 && t >= list[i + 1][0]) i++;
+  if (i === 0) { fill(list[0][1]); return; }
+  const [t0, c] = list[i], p = eOutExpo(prog(t, t0 - .12, t0 + .38));
+  fill(list[i - 1][1]); bg.fillStyle = c;
+  if (i % 2) bg.fillRect(0, H * (1 - p), W, H * p); else bg.fillRect(0, 0, W, H * p);
+}
+// 'zone' rings: concentric circles pulsing outward (brand motif)
+function rings(cx, cy, r0, gap, n, t, col, a = 1, lw = 4) {
+  bg.strokeStyle = col;
+  for (let i = 0; i < n; i++) {
+    const ph = ((t * .6 + i / n) % 1), r = r0 + ph * gap * n;
+    bg.globalAlpha = a * Math.sin(Math.PI * ph); bg.lineWidth = lw; bg.beginPath(); bg.arc(cx, cy, r, 0, Math.PI * 2); bg.stroke();
+  }
+  bg.globalAlpha = 1;
+}
+function drawPair(cx, cy, h, alpha = 1) { const w = h * IMG.pair.width / IMG.pair.height; bg.globalAlpha = alpha; bg.drawImage(IMG.pair, cx - w / 2, cy - h / 2, w, h); bg.globalAlpha = 1; }
 
+// ================================================================== frame
 async function setTime(t) {
   tl.seek(t, false);
   bg.setTransform(1, 0, 0, 1, 0, 0); bg.globalAlpha = 1;
   let useGL = false;
 
-  // ---------------- S0 intro asterisk (0–0.5)
-  if (t < .5) {
+  // ---------------- S0 intro: a dot sends out zone rings (0–1)
+  if (t < 1.0) {
     fill(INK);
-    const d = eOutBack(prog(t, 0, .14)), burst = eOutExpo(prog(t, .25, .45));
-    bg.fillStyle = OR; bg.beginPath(); bg.arc(540, 900, Math.max(0, 26 * d * (1 - burst)), 0, Math.PI * 2); bg.fill();
-    bg.strokeStyle = CREAM; bg.lineWidth = 3; bg.beginPath(); bg.arc(540, 900, lerp(60, 520, eOutExpo(prog(t, .05, .48))), 0, Math.PI * 2 * eOutExpo(prog(t, .05, .3))); bg.stroke();
-    if (t > .25) asterisk(540, 900, 300, 12, t * 2 + burst * 1.2, 18, OR, burst, 40 * burst);
+    const d = eOutBack(prog(t, 0, .25)), go = eInExpo(prog(t, .8, 1.0));
+    bg.fillStyle = OR; bg.beginPath(); bg.arc(540, 900, Math.max(0, 22 * d + go * 1200), 0, Math.PI * 2); bg.fill();   // the dot grows into the first orange field
+    rings(540, 900, 30, 70, 6, t, CREAM, clamp(prog(t, .1, .35)) * (1 - go), 3);
   }
-  // ---------------- S1 hook fields (0.5–2.5)
-  else if (t < 2.5) {
-    fill(t < .875 ? OR : t < 1.25 ? INK : t < 1.625 ? CREAM : OR);
-    if (t >= 1.625) asterisk(540, 1500, 240, 12, t * 1.5, 14, INK, eOutExpo(prog(t, 1.9, 2.2)), 30);
-  }
-  // ---------------- S2 camera iris reveal (2.5–4.5)
+  // ---------------- S1 hook (1–4.5)
   else if (t < 4.5) {
+    fields(t, [[1.0, OR], [1.75, INK], [2.5, CREAM], [3.25, OR]]);
+    if (t >= 3.4) rings(540, 1480, 40, 46, 5, t, INK, clamp(prog(t, 3.5, 3.8)) * (1 - prog(t, 4.2, 4.5)), 4);
+  }
+  // ---------------- S2 iris reveals the whole iPhone, centred (4.5–7)
+  else if (t < 7.0) {
     fill(INK);
-    const g = eOutExpo(prog(t, 2.5, 2.9)), close = eInExpo(prog(t, 4.15, 4.5));
-    const size = lerp(30, 470, g) * (1 - close * .96), n = lerp(2, 5.2, eInOutCubic(prog(t, 2.8, 3.5)));
-    const rot = lerp(-.5, 0, eOutCubic(prog(t, 2.5, 3.3))) + close * .8;
-    bg.save(); superellipsePath(540, 880, size, size, n, rot); bg.clip();
-    fill('#000');
-    const sc = lerp(.82, .74, prog(t, 2.5, 4.5)), px = lerp(1580, 1460, eInOutCubic(prog(t, 2.6, 4.3)));
-    bg.drawImage(IMG.cam, 540 - px * sc, 880 - 470 * sc, IMG.cam.width * sc, IMG.cam.height * sc);
+    const g = eOutExpo(prog(t, 4.5, 5.1)), close = eInOutCubic(prog(t, 6.6, 7.0));
+    const size = lerp(20, 500, g) * (1 - close * .97), n = lerp(2, 4.2, eInOutCubic(prog(t, 4.8, 5.6)));
+    const rot = lerp(-.35, 0, eOutCubic(prog(t, 4.5, 5.4)));
+    bg.save(); superellipsePath(540, 860, size * .86, size, n, rot); bg.clip(); fill('#060606');
+    drawPair(540, 860, lerp(840, 800, eInOutCubic(prog(t, 4.6, 6.8))));
     bg.restore();
-    bg.strokeStyle = OR; bg.lineWidth = 4; superellipsePath(540, 880, size + 22, size + 22, n, rot); bg.globalAlpha = g * (1 - close); bg.stroke(); bg.globalAlpha = 1;
-    orbitDots(540, 880, size + 90, 16, t * .9, 9, OR, eOutCubic(prog(t, 2.7, 3.3)) * (1 - close));
+    bg.strokeStyle = OR; bg.lineWidth = 4; bg.globalAlpha = g * (1 - close); superellipsePath(540, 860, size * .86 + 22, size + 22, n, rot); bg.stroke(); bg.globalAlpha = 1;
+    orbitDots(540, 860, size + 80, 16, t * .5, 8, OR, eOutCubic(prog(t, 4.8, 5.5)) * (1 - close));
   }
-  // ---------------- S3 truchet + phone window (4.5–6.5)
-  else if (t < 6.5) {
-    const inv = t >= 5.5;
-    truchet(t, inv ? INK : OR, inv ? OR : INK);
-    const g = eOutExpo(prog(t, 4.55, 5.0)), ex = eInExpo(prog(t, 6.2, 6.5));
-    const ww = lerp(560, 1200, ex), hh = lerp(0, 980, g) + ex * 1100, r = lerp(70, 0, ex);
-    bg.save(); roundRectPath(540, 860, ww, hh, r); bg.clip(); fill('#050505');
-    const s = 900 / IMG.pair.height, yy = lerp(900, 840, prog(t, 4.5, 6.5));
-    bg.drawImage(IMG.pair, 540 - IMG.pair.width * s / 2, yy - IMG.pair.height * s / 2, IMG.pair.width * s, IMG.pair.height * s);
+  // ---------------- S3 truchet field with the iPhone in a window (7–9.5)
+  else if (t < 9.5) {
+    const inv = t >= 8.5;
+    truchetT(t, inv ? INK : OR, inv ? OR : INK);
+    const g = eOutExpo(prog(t, 7.05, 7.6)), ex = eInOutCubic(prog(t, 9.15, 9.5));
+    const ww = lerp(660, 1300, ex), hh = lerp(0, 900, g) + ex * 1200, r = lerp(70, 0, ex);
+    bg.save(); roundRectPath(540, 840, ww, hh, r); bg.clip(); fill('#060606');
+    drawPair(540, 840, lerp(780, 760, prog(t, 7, 9.5)), 1 - ex);
     bg.restore();
-    bg.strokeStyle = CREAM; bg.lineWidth = 5; roundRectPath(540, 860, ww + 14, hh + 14, r + 7); bg.globalAlpha = g * (1 - ex); bg.stroke(); bg.globalAlpha = 1;
+    bg.strokeStyle = CREAM; bg.lineWidth = 5; bg.globalAlpha = g * (1 - ex); roundRectPath(540, 840, ww + 14, hh + 14, r + 7); bg.stroke(); bg.globalAlpha = 1;
   }
-  // ---------------- S4 particle iPhone (6.5–8.5) — Three.js
-  else if (t < 8.5) {
+  // ---------------- S4 particle iPhone (9.5–12) — Three.js
+  else if (t < 12.0) {
     useGL = true; hero.visible = false; particleGroup.visible = true;
-    const u = t - 6.5;
-    particleGroup.rotation.set(.18 + .08 * Math.sin(u * 1.4), Math.PI + .5 - u * 1.9 + Math.PI * eInOutCubic(prog(t, 7.4, 8.1)), .05);
-    pMat.uniforms.uMorph.value = eInOutCubic(prog(t, 7.45, 7.75)) * (1 - eInOutCubic(prog(t, 7.85, 8.15)));
-    pMat.uniforms.uCollapse.value = eInExpo(prog(t, 8.3, 8.5));
-    pMat.uniforms.uTime.value = t; pMat.uniforms.uA.value = clamp(prog(t, 6.5, 6.7) * 1.2);
-    camera.position.set(0, .05, lerp(5.2, 4.4, eOutCubic(prog(t, 6.5, 8.3)))); camera.lookAt(0, .15, 0);
+    const u = t - 9.5;
+    particleGroup.rotation.set(.12 + .06 * Math.sin(u * 1.2), Math.PI + .4 - u * 1.2 + Math.PI * eInOutCubic(prog(t, 10.6, 11.4)), .03);
+    pMat.uniforms.uMorph.value = eInOutCubic(prog(t, 10.6, 10.95)) * (1 - eInOutCubic(prog(t, 11.05, 11.4)));
+    pMat.uniforms.uCollapse.value = eInOutCubic(prog(t, 11.7, 12.0));
+    pMat.uniforms.uTime.value = t; pMat.uniforms.uA.value = clamp(prog(t, 9.5, 9.85));
+    camera.position.set(0, 0, lerp(6.2, 5.6, eInOutCubic(prog(t, 9.5, 11.8)))); camera.lookAt(0, -.12, 0);
     bloom.strength = .85;
   }
-  // ---------------- S5 shape morph (8.5–10.5)
-  else if (t < 10.5) {
+  // ---------------- S5 shape morph → the real iPhone (12–14.5)
+  else if (t < 14.5) {
     fill(CREAM);
-    const ks = [[8.5, 'circle', 'circle'], [9.0, 'circle', 'tri'], [9.5, 'tri', 'star'], [10.0, 'star', 'phone']];
+    const ks = [[12.0, 'circle', 'circle'], [12.6, 'circle', 'tri'], [13.2, 'tri', 'star'], [13.8, 'star', 'phone']];
     let A = SH.circle, B = SH.circle, k = 1;
-    for (const [tb, a, b] of ks) if (t >= tb) { A = SH[a]; B = SH[b]; k = eOutBack(prog(t, tb, tb + .32)); }
-    const appear = eOutBack(prog(t, 8.5, 8.75)), ex = eInExpo(prog(t, 10.3, 10.5));
-    const s = appear * (1 + ex * 4.5), rot = t < 10.0 ? (t - 8.5) * .5 : (1 - eOutCubic(prog(t, 10.0, 10.3))) * .75;
-    bg.fillStyle = INK; morphPath(A, B, k, 540, 860, s, rot); bg.fill();
-    if (t >= 10.0) {        // the final phone shape is filled by the real iPhone front
-      bg.save(); morphPath(A, B, k, 540, 860, s, rot); bg.clip();
-      const ph = 300 * 2.9 * s; bg.globalAlpha = eOutCubic(prog(t, 10.05, 10.25));
-      bg.translate(540, 860); bg.rotate(rot); bg.drawImage(IMG.front, -ph * 825 / 1700 / 2, -ph / 2, ph * 825 / 1700, ph); bg.restore(); bg.globalAlpha = 1;
+    for (const [tb, a, b] of ks) if (t >= tb) { A = SH[a]; B = SH[b]; k = eOutBack(prog(t, tb, tb + .45)); }
+    const appear = eOutBack(prog(t, 12.0, 12.4)), ex = eInOutCubic(prog(t, 14.2, 14.5));
+    const s = appear * (1 - ex), rot = t < 13.8 ? (t - 12.0) * .35 : (1 - eOutCubic(prog(t, 13.8, 14.2))) * .63;
+    bg.fillStyle = INK; morphPath(A, B, k, 540, 840, s, rot); bg.fill();
+    if (t >= 13.8) {
+      bg.save(); morphPath(A, B, k, 540, 840, s, rot); bg.clip();
+      const ph = 300 * 2.9 * s; bg.globalAlpha = eOutCubic(prog(t, 13.9, 14.15));
+      bg.translate(540, 840); bg.rotate(rot); bg.drawImage(IMG.front, -ph * 825 / 1700 / 2, -ph / 2, ph * 825 / 1700, ph); bg.restore(); bg.globalAlpha = 1;
     }
-    orbitDots(540, 860, 430 * s, 12, -(t - 8.5) * 1.3, 11, OR, eOutCubic(prog(t, 8.55, 8.95)) * (1 - ex));
+    orbitDots(540, 840, 470 * s, 12, -(t - 12.0) * .8, 10, OR, eOutCubic(prog(t, 12.05, 12.6)) * (1 - ex));
   }
-  // ---------------- S6 big word fields (10.5–12.5)
-  else if (t < 12.5) {
-    fill(t < 11 ? WHITE : t < 11.5 ? OR : t < 12 ? INK : CREAM);
-    // a single orange bar sweeps under each word, in time with it
-    const t0 = 10.5 + Math.floor((t - 10.5) / .5) * .5, p = eOutExpo(prog(t, t0, t0 + .35));
-    bg.fillStyle = t >= 11.0 && t < 11.5 ? INK : OR; bg.fillRect(540 - 470 * p, 1110, 940 * p, 18);
+  // ---------------- S6 big words (14.5–16.5)
+  else if (t < 16.5) {
+    fields(t, [[14.3, CREAM], [14.5, WHITE], [15.15, OR], [15.8, INK]]);
+    const t0 = t < 15.15 ? 14.5 : t < 15.8 ? 15.15 : 15.8, t1 = t0 + .65;
+    const p = eOutExpo(prog(t, t0 + .1, t0 + .5)), q = eInOutCubic(prog(t, t1 - .3, t1));
+    bg.fillStyle = t0 === 15.15 ? INK : OR; bg.fillRect(540 - 450 * p + 900 * q, 1105, 900 * (p - q) > 0 ? 900 * p * (1 - q) : 0, 16);
   }
-  // ---------------- S7 hero 3D (12.5–15) — Three.js
-  else if (t < 15) {
+  // ---------------- S7 hero, centred (16.5–19) — Three.js
+  else if (t < 19.0) {
     useGL = true; hero.visible = true; particleGroup.visible = false;
-    const u = eInOutCubic(prog(t, 12.5, 15.0));
-    camera.position.set(lerp(-.7, .55, u), lerp(.45, .15, u), lerp(5.6, 4.6, u)); camera.lookAt(0, -.15, 0);
-    pairMesh.rotation.y = lerp(.12, -.08, u); reflMesh.rotation.y = pairMesh.rotation.y;
-    cone.material.uniforms.uA.value = clamp(prog(t, 12.5, 12.62)) * (1 + .4 * pulse(t, 12.55, .02, .3)); cone.material.uniforms.uTime.value = t;
-    burstMesh.rotation.z = -t * .35; burstMesh.material.opacity = .45 * clamp(prog(t, 12.6, 13.0));
+    const u = eInOutCubic(prog(t, 16.5, 19.0));
+    camera.position.set(lerp(-.25, .25, u), lerp(.25, .1, u), lerp(5.6, 5.0, u)); camera.lookAt(0, -.38, 0);
+    pairMesh.rotation.y = lerp(.06, -.04, u); reflMesh.rotation.y = pairMesh.rotation.y;
+    cone.material.uniforms.uA.value = eOutCubic(prog(t, 16.5, 16.9)); cone.material.uniforms.uTime.value = t;
+    burstMesh.rotation.z = 0; burstMesh.scale.setScalar(1 + .04 * Math.sin(t * 2)); burstMesh.material.opacity = .4 * clamp(prog(t, 16.7, 17.2));
     dust.rotation.y = t * .08;
-    const fadeOut = eInExpo(prog(t, 14.75, 15.0));
-    pairMesh.material.opacity = 1 - fadeOut; bloom.strength = .55;
+    const fo = eInOutCubic(prog(t, 18.7, 19.0)), fi = eOutCubic(prog(t, 16.5, 16.85));
+    pairMesh.material.opacity = fi * (1 - fo); reflMesh.material.uniforms.uA.value = .28 * fi * (1 - fo);
+    bloom.strength = .55;
   }
-  // ---------------- S8 CTA (15–18)
+  // ---------------- S8 CTA (19–22.5)
   else {
-    fill(OR);
-    const e = eOutExpo(prog(t, 15.0, 15.45));
-    const kick = [16.5, 17.0, 17.5].reduce((a, b) => a + eOutCubic(prog(t, b, b + .3)) * .52, 0);
-    asterisk(540, 560, lerp(40, 250, e), 12, -t * .6 + e * 1.5 + kick, 22, INK, 1, lerp(5, 46, e));
-    // black slab behind "POŠALJI DM"
-    const p = eOutExpo(prog(t, 15.7, 16.0));
-    bg.fillStyle = INK; bg.beginPath(); bg.roundRect(540 - 480 * p, 1080, 960 * p, 210, 105 * p); bg.fill();
-    // trail of the paper plane
-    const tp = prog(t, 16.0, 16.55);
-    if (tp > 0) { bg.strokeStyle = INK; bg.lineWidth = 4; bg.setLineDash([14, 14]); bg.beginPath(); bg.moveTo(-100, 1330); bg.quadraticCurveTo(380, 1360, lerp(-100, 900, eOutCubic(tp)), lerp(1330, 1030, eOutCubic(tp))); bg.globalAlpha = 1 - prog(t, 16.6, 17.2); bg.stroke(); bg.setLineDash([]); bg.globalAlpha = 1; }
+    fill(INK);
+    const e = eOutExpo(prog(t, 19.0, 19.5));
+    bg.fillStyle = OR; bg.beginPath(); bg.arc(540, 960, e * 1300, 0, Math.PI * 2); bg.fill();   // orange field opens from the centre
+    rings(540, 520, 40, 44, 6, t, INK, clamp(prog(t, 19.3, 19.8)), 5);
+    bg.fillStyle = INK; bg.beginPath(); bg.arc(540, 520, Math.max(0, 16 * eOutBack(prog(t, 19.2, 19.5))), 0, Math.PI * 2); bg.fill();
+    const p = eOutExpo(prog(t, 19.75, 20.2));
+    bg.fillStyle = INK; bg.beginPath(); bg.roundRect(540 - 470 * p, 1015, 940 * p, 210, 105 * p); bg.fill();
+    const tp = prog(t, 20.05, 20.75);
+    if (tp > 0) { bg.strokeStyle = INK; bg.lineWidth = 4; bg.setLineDash([14, 14]); bg.beginPath(); bg.moveTo(-100, 1330); bg.quadraticCurveTo(380, 1380, lerp(-100, 880, eOutCubic(tp)), lerp(1330, 1000, eOutCubic(tp))); bg.globalAlpha = 1 - prog(t, 20.8, 21.4); bg.stroke(); bg.setLineDash([]); bg.globalAlpha = 1; }
   }
 
-  if (useGL) {
-    glEl.style.visibility = 'visible';
-    composer.render();
-  } else glEl.style.visibility = 'hidden';
-
-  // cut flashes
-  let fl = 0; for (const [tc, s] of CUTS) fl += s * pulse(t, tc, .008, .07);
-  $('flash').style.opacity = Math.min(.85, fl).toFixed(3);
+  if (useGL) { glEl.style.visibility = 'visible'; composer.render(); } else glEl.style.visibility = 'hidden';
+  $('flash').style.opacity = 0;
   fxc.putImageData(grains[Math.floor(t * 30) % 4], 0, 0);
   return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+// truchet with slower, smoother tile waves
+function truchetT(t, fg, bgc) {
+  fill(bgc); bg.strokeStyle = fg; bg.lineWidth = 20;
+  const beats = [7.0, 7.75, 8.5, 9.0];
+  for (const c of tiles) {
+    let ang = c.b * Math.PI / 2;
+    for (const b of beats) ang += Math.PI / 2 * eInOutCubic(prog(t, b + c.d * .03, b + c.d * .03 + .45));
+    const x = c.i * TC + TC / 2, y = c.j * TC + TC / 2 - 12;
+    bg.save(); bg.translate(x, y); bg.rotate(ang);
+    bg.beginPath(); bg.arc(-TC / 2, -TC / 2, TC / 2, 0, Math.PI / 2); bg.stroke();
+    bg.beginPath(); bg.arc(TC / 2, TC / 2, TC / 2, Math.PI, Math.PI * 1.5); bg.stroke();
+    bg.restore();
+  }
 }
 
 async function boot() {

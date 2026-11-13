@@ -1,7 +1,7 @@
 # ZONA TELEFONA: motion design spot (v7)
 
-18 s, 1080×1920, **60 fps**, Claude Orange #D97757 + crna + krem.
-Stil prema referentnom videu: ritmični rezovi na 120 BPM, cele pozadine u jednoj boji, ogromna variable-font tipografija (Anybody, širina i težina se animiraju), asterisk motiv, truchet proceduralni uzorak, pretapanje oblika sa tačkama u orbiti i 3D oblak tačaka.
+22,5 s, 1080×1920, **60 fps**, Claude Orange #D97757 + crna + krem.
+Stil prema referentnom videu: ritmični rezovi na 120 BPM, cele pozadine u jednoj boji, ogromna variable-font tipografija (Anybody, širina i težina se animiraju), motiv koncentričnih prstenova („zona“; Claude asterisk je uklonjen), truchet proceduralni uzorak, pretapanje oblika sa tačkama u orbiti i 3D oblak tačaka.
 
 **Tehnika**
 - **Three.js:** oblak od 26.000 tačaka u obliku iPhone 17 Pro, koji se pretapa u sferu i nazad; hero scena sa volumetrijskim konusom svetla (shader), prašinom, refleksijom na podu, rotirajućim asteriskom i bloom-om.
@@ -21,3 +21,5 @@ Stil prema referentnom videu: ritmični rezovi na 120 BPM, cele pozadine u jedno
 | 10,5–12,5 | **BRZO. FER. SIGURNO. LAKO.** na smenjivim bojama pozadine |
 | 12,5–15 | Hero: iPhone 17 Pro pod reflektorom, refleksija, prašina, asterisk |
 | 15–18 | CTA: **ZONA TELEFONA**, **POŠALJI DM** (papirni avion), @zona.telefona |
+
+**v7.1:** sporiji tekst (svaka reč ima 0,6–0,75 s, sa glatkim ulazom i izlazom), boje pozadine se smenjuju klizanjem umesto tvrdim rezom, telefoni su uvek centrirani i ceo uređaj je u kadru, a asterisk je zamenjen motivom prstenova.
