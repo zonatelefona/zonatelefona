@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA — iPhone 17 Pro × Galaxy S26 Ultra</title>
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/300.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/500.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/600.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/400-italic.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/500-italic.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="mbA" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur id="mbAb" stdDeviation="0 0"/></filter>
+  <filter id="mbB" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur id="mbBb" stdDeviation="0 0"/></filter>
+</svg>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="spot"></div>
+
+  <!-- iPhone (Apple CGI footage) -->
+  <canvas id="ipc" width="1080" height="1080"></canvas>
+
+  <!-- Samsung shots -->
+  <div class="ph" id="sA"><img src="assets/s26_back.png"><i class="sweep"></i></div>
+  <div id="macro"><img id="macroImg" src="assets/s26_back_full.png"></div>
+  <div class="ph" id="sC"><img src="assets/s26_back_l30.png"><i class="sweep"></i></div>
+  <div id="penClip"><img id="pen" src="assets/s26_spen.png"></div>
+  <div class="ph" id="sD"><img src="assets/s26_front.png"><i class="sweep"></i></div>
+
+  <!-- duo -->
+  <canvas id="trailBack" width="1080" height="1920"></canvas>
+  <div class="ph refl" id="dI"><img src="assets/ip17_back.png"><i class="sweep"></i><i class="shade"></i></div>
+  <div class="ph refl" id="dS"><img src="assets/s26_back.png"><i class="sweep"></i><i class="shade"></i></div>
+  <canvas id="trailFront" width="1080" height="1920"></canvas>
+
+  <div id="streak"></div>
+  <div id="wipe"></div>
+
+  <!-- typography -->
+  <div id="tIp" class="title">iPhone 17 Pro</div>
+  <div id="tSs" class="title">Galaxy S26 Ultra</div>
+  <div id="tChoice" class="serif choice">Izbor je tvoj.</div>
+  <div id="tHead" class="head"><div class="h1">Tvoj sledeći telefon</div><div class="h2 serif">je ovde.</div></div>
+  <div id="logo" class="logo">
+    <div class="ln top"></div><div class="ln bot"></div>
+    <div class="ltxt"><div class="zona">ZONA</div><div class="tel">TELEFONA</div></div>
+  </div>
+  <div id="cta" class="cta">Zaprati profil i pošalji DM.</div>
+  <div id="pill" class="pill">
+    <svg viewBox="0 0 48 48"><rect x="5" y="5" width="38" height="38" rx="11"/><circle cx="24" cy="24" r="9"/><circle cx="34.5" cy="13.5" r="2.4" class="f"/></svg>
+    <span>@zona.telefona</span>
+    <svg viewBox="0 0 48 48"><path d="M43 6 5 21l14 6 6 15z"/><path d="M43 6 19 27"/></svg>
+  </div>
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="black"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
