@@ -305,6 +305,7 @@ function drawCall(t) {
 
 // ================================================================== GSAP kinetic type — ONE big word at a time, caps centred on the frame
 const tl = gsap.timeline({ paused: true });
+function FT(tg, from, to, at) { tl.set(tg, from, 0); return tl.fromTo(tg, from, { ...to, immediateRender: false }, at); }
 const mctx = document.createElement('canvas').getContext('2d');
 function measure(text, wdth, wght = 900) {
   const sp = document.createElement('span'); sp.className = 'word'; sp.textContent = text;
@@ -335,19 +336,21 @@ function word(id, tIn, tOut, style, { color = INK, maxW = 940, fs0 = 400, cy = C
   tl.set(el, { autoAlpha: 0 }, 0).set(el, { autoAlpha: 1 }, tIn);
   const hold = tOut !== undefined ? tOut - tIn + .25 : 3;
   tl.fromTo(el, { scale: .97 }, { scale: 1.035, duration: hold, ease: 'none', immediateRender: false }, tIn);    // keeps breathing while it is on screen
-  const F = (tg, a, b, at = tIn) => tl.fromTo(tg, a, { ...b, immediateRender: false }, at);
-  if (style === 'rise') { F(ch, { yPercent: 125 }, { yPercent: 0, duration: .5, ease: 'expo.out', stagger: .03 }); F(el, { '--wdth': wd * .6 }, { '--wdth': wd, duration: .65, ease: 'expo.out' }); }
-  if (style === 'punch') { F(ln, { scale: 2.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: .42, ease: 'expo.out' }); F(el, { '--wdth': wd * .7 }, { '--wdth': wd, duration: .5, ease: 'expo.out' }); }
-  if (style === 'slide') { F(ln, { x: 820, skewX: -22 }, { x: 0, skewX: 0, duration: .5, ease: 'expo.out' }); F(ch, { x: 90 }, { x: 0, duration: .55, ease: 'expo.out', stagger: .025 }); }
-  if (style === 'flip') F(ch, { rotationX: -105, yPercent: 35, transformPerspective: 900, autoAlpha: 0 }, { rotationX: 0, yPercent: 0, autoAlpha: 1, duration: .6, ease: 'back.out(1.5)', stagger: .035 });
+  const F = (tg, a, b, at = tIn) => FT(tg, a, b, at);
+  // the letter-by-letter entrance must be completely finished before the exit starts (otherwise a late letter pops back)
+  const avail = tOut !== undefined ? tOut - tIn - .04 : 9, fit = (dur, st) => { const k = Math.min(1, avail / (dur + st * (ch.length - 1))); return [dur * k, st * k]; };
+  if (style === 'rise') { const [d, st] = fit(.5, .03); F(ch, { yPercent: 125 }, { yPercent: 0, duration: d, ease: 'expo.out', stagger: st }); F(el, { '--wdth': wd * .6 }, { '--wdth': wd, duration: Math.min(.65, avail), ease: 'expo.out' }); }
+  if (style === 'punch') { F(ln, { scale: 2.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: Math.min(.42, avail), ease: 'expo.out' }); F(el, { '--wdth': wd * .7 }, { '--wdth': wd, duration: Math.min(.5, avail), ease: 'expo.out' }); }
+  if (style === 'slide') { const [d, st] = fit(.55, .025); F(ln, { x: 820, skewX: -22 }, { x: 0, skewX: 0, duration: Math.min(.5, avail), ease: 'expo.out' }); F(ch, { x: 90 }, { x: 0, duration: d, ease: 'expo.out', stagger: st }); }
+  if (style === 'flip') { const [d, st] = fit(.6, .035); F(ch, { rotationX: -105, yPercent: 35, transformPerspective: 900, autoAlpha: 0 }, { rotationX: 0, yPercent: 0, autoAlpha: 1, duration: d, ease: 'back.out(1.5)', stagger: st }); }
   if (style === 'burst') F(ch, { scale: 0, x: i => (hash(i + 3) - .5) * 600, y: i => (hash(i + 17) - .5) * 440, rotation: i => (hash(i + 29) - .5) * 70 }, { scale: 1, x: 0, y: 0, rotation: 0, duration: .45, ease: 'expo.out', stagger: { each: .012, from: 'center' } });
-  if (style === 'stretch') { F(el, { '--wdth': 50 }, { '--wdth': wd, duration: .6, ease: 'expo.out' }); F(ln, { scaleY: 1.6, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: .45, ease: 'expo.out' }); }
+  if (style === 'stretch') { F(el, { '--wdth': 50 }, { '--wdth': wd, duration: Math.min(.6, avail), ease: 'expo.out' }); F(ln, { scaleY: 1.6, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: Math.min(.45, avail), ease: 'expo.out' }); }
   if (tOut !== undefined) {
     const d = EX[style];
     if (style === 'rise') tl.to(ch, { yPercent: -125, duration: d, ease: 'power2.in', stagger: .012 }, tOut);
     if (style === 'punch' || style === 'burst') tl.to(ln, { scale: .5, autoAlpha: 0, duration: d, ease: 'power2.in' }, tOut);
     if (style === 'slide') tl.to(ln, { x: -820, skewX: 22, duration: d, ease: 'power2.in' }, tOut);
-    if (style === 'flip') tl.to(ch, { rotationX: 100, autoAlpha: 0, duration: d, ease: 'power2.in', stagger: .01 }, tOut);
+    if (style === 'flip') tl.to(ch, { rotationX: 85, autoAlpha: 0, duration: d, ease: 'power2.in', stagger: .01 }, tOut);   // never past edge-on (no back-face flash)
     if (style === 'stretch') { tl.to(el, { '--wdth': 50, duration: d, ease: 'power2.in' }, tOut); tl.to(ln, { scaleX: .3, autoAlpha: 0, duration: d, ease: 'power2.in' }, tOut); }
     tl.set(el, { autoAlpha: 0 }, tOut + d + .012 * ch.length + .02);
   }
@@ -380,16 +383,17 @@ function buildType() {
   A.style.top = y + 'px'; y += hA + gap1; B.style.top = y + 'px'; y += hB + gap2; P.style.top = y + 'px'; y += hP + gap3; Hd.style.top = y + 'px';
   const soloDy = CY - (parseFloat(A.style.top) + capCentre(fa.fs));
   tl.set(A, { autoAlpha: 0 }, 0).set(A, { autoAlpha: 1 }, T.cta);
-  tl.fromTo(chA, { yPercent: 125 }, { yPercent: 0, duration: .5, ease: 'expo.out', stagger: .035, immediateRender: false }, T.cta);
-  tl.fromTo(A, { '--wdth': fa.wd * .6 }, { '--wdth': fa.wd, duration: .65, ease: 'expo.out', immediateRender: false }, T.cta);
-  tl.fromTo(lnA, { y: soloDy, scale: 1.28 }, { y: 0, scale: 1, duration: .6, ease: 'expo.inOut', immediateRender: false }, T.cta2 - .15);
+  FT(chA, { yPercent: 125 }, { yPercent: 0, duration: .5, ease: 'expo.out', stagger: .035 }, T.cta);
+  FT(A, { '--wdth': fa.wd * .6 }, { '--wdth': fa.wd, duration: .65, ease: 'expo.out' }, T.cta);
+  tl.set(lnA, { y: soloDy, scale: 1.28 }, 0);                                   // ZONA starts big in the centre…
+  tl.to(lnA, { y: 0, scale: 1, duration: .65, ease: 'power3.inOut' }, T.cta2 - .15);   // …then glides up into the lockup
   tl.set(B, { autoAlpha: 0 }, 0).set(B, { autoAlpha: 1 }, T.cta2);
-  tl.fromTo(chB, { yPercent: 125 }, { yPercent: 0, duration: .55, ease: 'expo.out', stagger: .03, immediateRender: false }, T.cta2 + .1);
+  FT(chB, { yPercent: 125 }, { yPercent: 0, duration: .55, ease: 'expo.out', stagger: .03 }, T.cta2 + .1);
   const pill = P.querySelector('.pill'), pt = P.querySelector('.pt');
   tl.set(P, { autoAlpha: 0 }, 0).set(P, { autoAlpha: 1 }, T.pill);
-  tl.fromTo(pill, { scaleX: 0, scaleY: .3 }, { scaleX: 1, duration: .75, ease: 'elastic.out(1,.75)', immediateRender: false }, T.pill)
-    .fromTo(pill, { scaleY: .3 }, { scaleY: 1, duration: .55, ease: 'back.out(2.5)', immediateRender: false }, T.pill)
-    .fromTo(pt, { autoAlpha: 0, x: 40 }, { autoAlpha: 1, x: 0, duration: .5, ease: 'expo.out', immediateRender: false }, T.pill + .2);
+  FT(pill, { scaleX: 0, scaleY: .3 }, { scaleX: 1, duration: .75, ease: 'elastic.out(1,.75)' }, T.pill);
+  tl.fromTo(pill, { scaleY: .3 }, { scaleY: 1, duration: .55, ease: 'back.out(2.5)', immediateRender: false }, T.pill);
+  FT(pt, { autoAlpha: 0, x: 40 }, { autoAlpha: 1, x: 0, duration: .5, ease: 'expo.out' }, T.pill + .2);
   for (const b of [T.pill + 1.0, T.pill + 1.5]) tl.to(pill, { scale: 1.05, duration: .09, ease: 'power2.out' }, b).to(pill, { scale: 1, duration: .4, ease: 'expo.out' }, b + .09);
   soft(Hd, T.pill + .4, T.outro);
   // outro → loop: everything collapses back into the dot the film starts from
@@ -556,6 +560,6 @@ async function boot() {
   const pt = texOf(IMG.pair), ph = 1000, pw = ph * IMG.pair.width / IMG.pair.height;
   pairMesh = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), phoneMat(pt)); scene.add(pairMesh); pairMesh.visible = false;
   buildType();
-  window.setTime = setTime; await setTime(0); window.READY = true;
+  window.setTime = setTime; window.__tl = tl; await setTime(0); window.READY = true;   // __tl: used by tools/flicker check
 }
 boot();

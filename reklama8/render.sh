@@ -7,6 +7,7 @@ python3 audio.py "$OUT/audio.wav"
 END=$(python3 -c "import json;print(json.load(open('timeline.json'))['end'])")
 node render.mjs "$OUT/frames" 120 0 "$END" "${WORKERS:-3}"
 python3 tools/qa.py "$OUT/frames" timeline.json      # centring check: must end with ISSUES 0
+node tools/flicker.mjs                                 # letter flash/stutter check: must end with JUMPS 0
 I=$(ffmpeg -hide_banner -nostats -i "$OUT/audio.wav" -af ebur128 -f null - 2>&1 | awk '/Summary/{s=1} s&&/ I:/{print $2; exit}')
 GAIN=$(python3 -c "print(round(-14.0 - float('$I'), 2))")
 ffmpeg -y -framerate 120 -i "$OUT/frames/%05d.jpg" -i "$OUT/audio.wav" -map 0:v -map 1:a \
