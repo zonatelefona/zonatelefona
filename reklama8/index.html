@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA v8</title>
+<link rel="stylesheet" href="node_modules/@fontsource-variable/anybody/standard.css">
+<link rel="stylesheet" href="node_modules/@fontsource-variable/inter/index.css">
+<link rel="stylesheet" href="node_modules/@fontsource/cormorant-garamond/500-italic.css">
+<link rel="stylesheet" href="node_modules/@fontsource/jetbrains-mono/500.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/", "gsap": "./node_modules/gsap/index.js" } }
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bgc" width="1080" height="1920"></canvas>
+  <!-- type that sits BEHIND the phones -->
+  <div id="typeB" class="layer">
+    <div id="mq"></div>
+  </div>
+  <canvas id="gl" width="1080" height="1920"></canvas>
+  <!-- type in front -->
+  <div id="typeF" class="layer">
+    <div class="blk word" id="b1" data-lines="STARI|TELEFON?"></div>
+    <div class="blk word" id="b2" data-lines="ZAMENI GA|ZA NOVI."></div>
+    <div class="blk word" id="d1" data-lines="KUPI."></div>
+    <div class="blk word" id="d2" data-lines="PRODAJ."></div>
+    <div class="blk word" id="d3" data-lines="ZAMENI."></div>
+    <div class="blk word" id="e1" data-lines="OTKUPUJEMO"></div>
+    <div class="blk serif" id="e1s">brza procena · fer cena</div>
+    <div class="blk word" id="f1" data-lines="BRZO."></div>
+    <div class="blk word" id="f2" data-lines="FER."></div>
+    <div class="blk word" id="f3" data-lines="SIGURNO."></div>
+    <div class="blk word" id="h1" data-lines="ZONA|TELEFONA"></div>
+    <div class="blk" id="h2"><div class="pill"><span class="slot"></span><span class="pt">POŠALJI DM</span></div></div>
+    <div class="blk mono" id="h3">@zona.telefona</div>
+    <div class="blk serif" id="h4">kupovina · otkup · zamena</div>
+    <svg id="plane" viewBox="0 0 48 48"><path d="M44 5 4 21l15 6 6 15z"/><path d="M44 5 19 27"/></svg>
+  </div>
+  <div id="vig"></div>
+  <canvas id="fx" width="540" height="960"></canvas>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
