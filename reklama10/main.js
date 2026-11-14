@@ -297,7 +297,7 @@ async function setTime(t) {
     const img = await PL.get(plSrc(t));
     // camera: slow dolly-in on the silhouette → macro → punch-in on "OVAJ." → pull back as it turns to the screen
     let s, ax, ay;
-    if (t < T.s2) { s = lerp(1.42, 1.72, eInOutSine(prog(t, 0, T.s2))); ax = 780; ay = 455; }
+    if (t < T.s2) { const u = prog(t, 0, T.s2); s = lerp(1.42, 1.72, .3 * u + .7 * eInOutSine(u)); ax = 780; ay = 455; }
     else {
       const a = eInOutSine(prog(t, T.s2, 5.35)), p = eOutExpo(prog(t, T.push, T.push + .5)), b = eInOutCubic(prog(t, 5.95, 6.9));
       s = lerp(lerp(1.72, 1.5, a) + .22 * p, 1.08, b); ax = lerp(lerp(780, 950, a), 975, b); ay = lerp(lerp(455, 470, a), 640, b);
@@ -306,6 +306,7 @@ async function setTime(t) {
     const whip = eInCubic(prog(t, T.s2out, T.s3));
     camShake = shake(t, T.pogledas, 9, .2);
     plate(bg, img, ax, ay, s, { sx: CX + hx - whip * 1100, sy: 1010 + hy, smear: -whip * 320, feather: 300 });
+    if (t < 1.4) sweep(fg, -.1, 1.35, t, .07, 340, -.5);           // faint rim light travelling over the silhouette
     if (t >= T.s2 - .2) sweep(fg, 3.3, 4.6, t, .1, 300);
   }
   // ---------------- S3a: macro of the Cosmic Orange camera (real photo), tracking across the lenses (6.8 – 8.6)
@@ -313,7 +314,7 @@ async function setTime(t) {
     const enter = 1 - eOutCubic(prog(t, T.s2out + .1, T.s3 + .2)), leave = eInCubic(prog(t, T.s26 - .1, T.s26 + .2));
     const u = eInOutSine(prog(t, T.s3, T.s26));
     const rack = 18 * (1 - eOutCubic(prog(t, T.s3 - .05, T.s3 + .45))) + 12 * leave;
-    plate(bg, IMG.cam, lerp(1700, 1080, u), lerp(470, 430, u), lerp(.74, .86, u), { sx: CX + enter * 900 - leave * 900, sy: 1040, blur: rack, smear: (enter - leave) * 260, feather: 280 });
+    plate(bg, IMG.cam, lerp(1500, 900, u), lerp(400, 360, u), lerp(1.0, 1.16, u), { sx: CX + enter * 900 - leave * 900, sy: 1000, blur: rack, smear: (enter - leave) * 260, feather: 300 });
     sweep(fg, T.s3 + .2, T.s26, t, .14, 220);
   }
   // ---------------- S3b: Galaxy S26 Ultra — tracking in, turning (three real angles), macro push on the camera array (8.45 – 10.25)
@@ -351,7 +352,7 @@ async function setTime(t) {
     cone.material.uniforms.uA.value = inn * (1 - toLine * .6); cone.material.uniforms.uTime.value = t; floorSpot.material.uniforms.uA.value = inn;
     // ends exactly on the S5 pose of slot 1 (x 250, y 1080, h 640, ry π+.17) so the hand-over is seamless
     const ry = Math.PI + lerp(.55, -.35, eInOutSine(prog(t, T.s4, T.tapeStop))) - .35 * eInOutSine(prog(t, T.punch, T.s4out)) + .87 * toLine;
-    const h = lerp(lerp(940, 1260, push), 620, toLine), x = lerp(CX, BADGES[0].x, toLine), y = lerp(lerp(1065, 1290, push), 1090, toLine);
+    const h = lerp(lerp(940, 1260, push), 620, toLine), x = lerp(CX, BADGES[0].x, toLine), y = lerp(lerp(1065, 1330, push), 1090, toLine);
     const float = Math.sin(t * 1.2) * 6 * (1 - push);
     ip.front.material.uniforms.map.value = TEX.front;
     ip.set({ x: x + camShake[0], y: y + float + camShake[1], h, rx: .04, ry, sweep: lerp(-.35, 1.35, eInOutSine(prog(t, 12.7, 13.9))), sweepA: .7, a: inn });
@@ -389,13 +390,16 @@ async function setTime(t) {
   // ---------------- S6: brand reveal on pure black (21.0 – 25.0)
   if (t >= T.s6) {
     const a = clamp(prog(t, T.logo - .1, T.logo + .5));
-    zoneMark(bg, CX, 470, 50, a, prog(t, T.logo, T.logo + 1.2));
+    const ep = 1 + .03 * eInOutSine(prog(t, T.logo, T.end)); bg.save(); bg.translate(CX, 960); bg.scale(ep, ep); bg.translate(-CX, -960);
+    zoneMark(bg, CX, 470, 50, a, prog(t, T.logo, T.end - .3));
     const lw = 300 * eOutCubic(prog(t, T.logo + .35, T.logo + 1.1));
     if (lw > 0) { bg.fillStyle = OR; bg.fillRect(CX - lw, 936, 2 * lw, 3); }
-    pool(bg, CX, 900, 620, 420, 'rgba(255,240,230,.05)', a);
+    pool(bg, CX, 900, 620, 420, 'rgba(255,240,230,.05)', a * (1 + .25 * Math.sin(t * 1.7))); bg.restore();
   }
 
   stage.style.transform = `translate(${camShake[0].toFixed(2)}px,${camShake[1].toFixed(2)}px)`;
+  const endPush = 1 + .03 * eInOutSine(prog(t, T.logo, T.end));
+  typeEl.style.transform = `scale(${endPush.toFixed(5)})`; typeEl.style.transformOrigin = '540px 960px';
   if (useGL) { glEl.style.visibility = 'visible'; renderer.render(scene, camera); } else glEl.style.visibility = 'hidden';
   fxc.putImageData(grains[Math.floor(t * 24) % 4], 0, 0);
   return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
