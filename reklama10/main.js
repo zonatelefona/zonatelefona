@@ -350,12 +350,14 @@ async function setTime(t) {
     if (t >= T.s2 - .2 && t < 5) sweep(fg, 3.3, 4.6, t, .1, 300);
   }
   // ---------------- S3: three different phones, each whole, each under its own light; the camera trucks right between them (7.0 – 12.0)
-  if (t >= T.s3 - .02 && t < T.s4 + .3) {
-    useGL = true; studio(bg, 1);
+  if (t >= T.s3 - .2 && t < T.s4 + .3) {
+    useGL = true; studio(bg, clamp(prog(t, T.s3 - .2, T.s3 + .05)));
     const Y = 1130, fl = sy(Y) - 420 - 10;
     // camera truck between products: expo in-out, real motion blur comes from frame blending
     const trk1 = eInOutExpo(prog(t, T.p2 - .3, T.p2 + .3)), trk2 = eInOutExpo(prog(t, T.p3 - .3, T.p3 + .3));
-    const lightOn = eOutCubic(prog(t, T.s3, T.s3 + .5)), outS = eInOutCubic(prog(t, T.s3out, T.s4 + .2));
+    const lightOn = eOutCubic(prog(t, T.s3 - .15, T.s3 + .4)), outS = eInOutCubic(prog(t, T.s3out, T.s4 + .2));
+    // soft back-light behind the product on screen so dark phones separate from the stage
+    pool(bg, CX, Y - 120, 420, 520, 'rgba(255,244,232,.075)', lightOn * (1 - outS));
     stageLights(lightOn * (1 - outS), fl, .75);
     const sway = (k) => Math.sin(t * .9 + k) * .07;
     const X = (slot) => CX + (slot - trk1 - trk2) * 980;      // slot 0,1,2 along the truck
@@ -389,7 +391,9 @@ async function setTime(t) {
     const dimEnd = clamp(prog(t, T.s5out, T.s6)), fin = eInOutCubic(prog(t, T.s6, T.s6 + .9)), gone = eInOutCubic(prog(t, T.s6 + .45, T.logo + .35));
     const hl = i => Math.max(0, Math.sin(Math.PI * prog(t, T['n' + (i + 1)], T['n' + (i + 1)] + .6)));
     stageLights(on(1) * (1 - fin), fl, .5);
-    for (let i = 0; i < 3; i++) pool(bg, BADGES[i].x + (1 - truck) * 160, 1385, 190, 55, 'rgba(255,245,235,.12)', on(i) * (1 - dimEnd * (i === 1 ? 0 : 1)) * (1 - gone));
+    for (let i = 0; i < 3; i++) { const k = on(i) * (1 - dimEnd * (i === 1 ? 0 : 1)) * (1 - gone);
+      pool(bg, BADGES[i].x + (1 - truck) * 160, 1385, 190, 55, 'rgba(255,245,235,.12)', k);
+      pool(bg, BADGES[i].x + (1 - truck) * (160 + i * 40), Y - 60, 230, 330, 'rgba(255,244,232,.085)', k); }
     const X = i => BADGES[i].x + (1 - truck) * (160 + i * 40);
     withRefl(sil, silR, { x: X(0) - fin * 120, y: Y, h: H5, rx: .02, ry: Math.PI + .1, sweep: lerp(-.3, 1.3, prog(t, T.n1, T.n1 + .6)), sweepA: hl(0), dim: Math.max(1 - on(0), .55 * dimEnd, fin), a: 1 - gone }, fl, 1 - gone);
     const h2 = lerp(H5, 420, fin), y2 = lerp(Y, 1000, fin);
