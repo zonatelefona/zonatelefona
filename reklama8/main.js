@@ -110,7 +110,7 @@ class Phone {
     const fw = 825 / 1700, bw = 887 / 1850, D = .052;
     this.front = new THREE.Mesh(new THREE.PlaneGeometry(fw, 1), phoneMat(frontTex)); this.front.position.z = D / 2 + .001;
     this.back = new THREE.Mesh(new THREE.PlaneGeometry(bw, 1), phoneMat(backTex)); this.back.position.z = -D / 2 - .001; this.back.rotation.y = Math.PI;
-    const ew = .468, eh = .976, r = .075, s = new THREE.Shape();
+    const ew = .468, eh = .976, r = .088, s = new THREE.Shape();
     s.moveTo(-ew / 2 + r, -eh / 2); s.lineTo(ew / 2 - r, -eh / 2); s.quadraticCurveTo(ew / 2, -eh / 2, ew / 2, -eh / 2 + r);
     s.lineTo(ew / 2, eh / 2 - r); s.quadraticCurveTo(ew / 2, eh / 2, ew / 2 - r, eh / 2); s.lineTo(-ew / 2 + r, eh / 2);
     s.quadraticCurveTo(-ew / 2, eh / 2, -ew / 2, eh / 2 - r); s.lineTo(-ew / 2, -eh / 2 + r); s.quadraticCurveTo(-ew / 2, -eh / 2, -ew / 2 + r, -eh / 2);
@@ -230,16 +230,9 @@ const floorSpot = new THREE.Mesh(new THREE.PlaneGeometry(2600, 2600), new THREE.
 floorSpot.rotation.x = -Math.PI / 2; floorSpot.position.set(0, FLOOR, -100); hero.add(floorSpot);
 
 // ================================================================== incoming-call screen (drawn into the phone's own texture)
-const SCR = { x0: 35, x1: 790, y0: 30, y1: 1671 };
-const CORNER = [[0, 31], [1, 28.5], [5, 23.5], [10, 17.5], [20, 8.5], [30, .5], [31, 0]];      // measured screen corner profile
-function cornerOff(dy) { for (let i = 1; i < CORNER.length; i++) if (dy <= CORNER[i][0]) { const [a, oa] = CORNER[i - 1], [b, ob] = CORNER[i]; return lerp(oa, ob, (dy - a) / (b - a)); } return 0; }
+const SCR = { x0: 35, x1: 790, y0: 30, y1: 1671, r: 116 };   // screen rect + corner radius measured on front.png
 function screenPath(c, grow = 0) {
-  const { x0, x1, y0, y1 } = SCR, pts = [];
-  for (let dy = 0; dy <= 31; dy += 1) pts.push([x0 + cornerOff(dy) - grow, y0 + dy - grow * (dy === 0 ? 1 : 0)]);
-  for (let dy = 31; dy >= 0; dy -= 1) pts.push([x0 + cornerOff(dy) - grow, y1 - dy + grow * (dy === 0 ? 1 : 0)]);
-  for (let dy = 0; dy <= 31; dy += 1) pts.push([x1 - cornerOff(dy) + grow, y1 - dy + grow * (dy === 0 ? 1 : 0)]);
-  for (let dy = 31; dy >= 0; dy -= 1) pts.push([x1 - cornerOff(dy) + grow, y0 + dy - grow * (dy === 0 ? 1 : 0)]);
-  c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+  const { x0, x1, y0, y1, r } = SCR; c.beginPath(); c.roundRect(x0 - 1 - grow, y0 - 1 - grow, x1 - x0 + 2 + 2 * grow, y1 - y0 + 2 + 2 * grow, r + 1 + grow);
 }
 let poster, frameImg;
 function prepCall() {
@@ -250,7 +243,7 @@ function prepCall() {
   pc.fillStyle = g; pc.fillRect(0, 0, 825, 1700);
   frameImg = document.createElement('canvas'); frameImg.width = 825; frameImg.height = 1700;
   const fc = frameImg.getContext('2d'); fc.drawImage(IMG.front, 0, 0);
-  fc.globalCompositeOperation = 'destination-out'; screenPath(fc, 1.2); fc.fill();
+  fc.globalCompositeOperation = 'destination-out'; screenPath(fc, 0); fc.fill();
   callCanvas = document.createElement('canvas'); callCanvas.width = 825; callCanvas.height = 1700;
 }
 function handset(c, x, y, s, rot, col) {
@@ -310,78 +303,98 @@ function drawCall(t) {
   callTex.needsUpdate = true;
 }
 
-// ================================================================== GSAP kinetic type (all blocks centred on the frame centre)
+// ================================================================== GSAP kinetic type — ONE big word at a time, caps centred on the frame
 const tl = gsap.timeline({ paused: true });
-function measure(text, cls, wdth, wght = 900) {
-  const sp = document.createElement('span'); sp.className = cls; sp.textContent = text;
+const mctx = document.createElement('canvas').getContext('2d');
+function measure(text, wdth, wght = 900) {
+  const sp = document.createElement('span'); sp.className = 'word'; sp.textContent = text;
   sp.style.cssText = `position:absolute;left:0;top:0;visibility:hidden;white-space:nowrap;font-size:100px;--wdth:${wdth};--wght:${wght};font-variation-settings:'wdth' ${wdth},'wght' ${wght}`;
   document.body.appendChild(sp); const w = sp.getBoundingClientRect().width; sp.remove(); return w;
 }
-function build(id, { color = INK, width = 900, wdth = 100, widths } = {}) {
-  const el = $(id), lines = el.dataset.lines.split('|');
-  el.style.color = color; el.style.setProperty('--wdth', wdth);
-  el.innerHTML = lines.map(l => `<div class="ln"><span class="lt">${[...l].map(ch => `<span class="ch">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</span></div>`).join('');
-  [...el.querySelectorAll('.ln')].forEach((ln, i) => { const w = widths ? widths[i] : width; ln.style.fontSize = (100 * w / measure(lines[i], 'word', wdth)).toFixed(1) + 'px'; });
+function chars(el) { const t = el.dataset.text; el.innerHTML = `<div class="ln"><span class="lt">${[...t].map(ch => `<span class="ch">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('')}</span></div>`; return [...el.querySelectorAll('.ch')]; }
+// as big as possible inside the Reels safe width: choose the width axis so every word gets ~the same big cap height
+function fitWord(el, { maxW = 940, fs0 = 400, fsMax = 470 } = {}) {
+  const text = el.dataset.text, wAt = (wd, fs) => measure(text, wd) * fs / 100;
+  let wd, fs = fs0;
+  if (wAt(50, fs) > maxW) { wd = 50; fs = maxW * 100 / measure(text, 50); }
+  else if (wAt(150, fs) < maxW) { wd = 150; fs = Math.min(fsMax, maxW * 100 / measure(text, 150)); }
+  else { let lo = 50, hi = 150; for (let i = 0; i < 18; i++) { const m = (lo + hi) / 2; if (wAt(m, fs) > maxW) hi = m; else lo = m; } wd = lo; }
+  el.style.fontSize = fs.toFixed(1) + 'px'; el.style.setProperty('--wdth', wd.toFixed(1));
+  return { wd, fs };
+}
+function capCentre(fs) {   // y of the cap-height centre inside the block (line-height .86)
+  mctx.font = `900 ${fs}px "Anybody Variable"`; const m = mctx.measureText('H'), Lh = .86 * fs;
+  const base = (Lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+  return base - m.actualBoundingBoxAscent / 2;
+}
+const EX = { rise: .2, punch: .2, slide: .22, flip: .22, burst: .22, stretch: .22 };
+function word(id, tIn, tOut, style, { color = INK, maxW = 940, fs0 = 400, cy = CY } = {}) {
+  const el = $(id), ch = chars(el), ln = el.querySelector('.ln'); el.style.color = color;
+  const { wd, fs } = fitWord(el, { maxW, fs0 }); el.style.top = (cy - capCentre(fs)) + 'px';
+  if (style === 'rise') el.classList.add('mask');
+  tl.set(el, { autoAlpha: 0 }, 0).set(el, { autoAlpha: 1 }, tIn);
+  const hold = tOut !== undefined ? tOut - tIn + .25 : 3;
+  tl.fromTo(el, { scale: .97 }, { scale: 1.035, duration: hold, ease: 'none', immediateRender: false }, tIn);    // keeps breathing while it is on screen
+  const F = (tg, a, b, at = tIn) => tl.fromTo(tg, a, { ...b, immediateRender: false }, at);
+  if (style === 'rise') { F(ch, { yPercent: 125 }, { yPercent: 0, duration: .5, ease: 'expo.out', stagger: .03 }); F(el, { '--wdth': wd * .6 }, { '--wdth': wd, duration: .65, ease: 'expo.out' }); }
+  if (style === 'punch') { F(ln, { scale: 2.5, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: .42, ease: 'expo.out' }); F(el, { '--wdth': wd * .7 }, { '--wdth': wd, duration: .5, ease: 'expo.out' }); }
+  if (style === 'slide') { F(ln, { x: 820, skewX: -22 }, { x: 0, skewX: 0, duration: .5, ease: 'expo.out' }); F(ch, { x: 90 }, { x: 0, duration: .55, ease: 'expo.out', stagger: .025 }); }
+  if (style === 'flip') F(ch, { rotationX: -105, yPercent: 35, transformPerspective: 900, autoAlpha: 0 }, { rotationX: 0, yPercent: 0, autoAlpha: 1, duration: .6, ease: 'back.out(1.5)', stagger: .035 });
+  if (style === 'burst') F(ch, { scale: 0, x: i => (hash(i + 3) - .5) * 600, y: i => (hash(i + 17) - .5) * 440, rotation: i => (hash(i + 29) - .5) * 70 }, { scale: 1, x: 0, y: 0, rotation: 0, duration: .45, ease: 'expo.out', stagger: { each: .012, from: 'center' } });
+  if (style === 'stretch') { F(el, { '--wdth': 50 }, { '--wdth': wd, duration: .6, ease: 'expo.out' }); F(ln, { scaleY: 1.6, autoAlpha: 0 }, { scaleY: 1, autoAlpha: 1, duration: .45, ease: 'expo.out' }); }
+  if (tOut !== undefined) {
+    const d = EX[style];
+    if (style === 'rise') tl.to(ch, { yPercent: -125, duration: d, ease: 'power2.in', stagger: .012 }, tOut);
+    if (style === 'punch' || style === 'burst') tl.to(ln, { scale: .5, autoAlpha: 0, duration: d, ease: 'power2.in' }, tOut);
+    if (style === 'slide') tl.to(ln, { x: -820, skewX: 22, duration: d, ease: 'power2.in' }, tOut);
+    if (style === 'flip') tl.to(ch, { rotationX: 100, autoAlpha: 0, duration: d, ease: 'power2.in', stagger: .01 }, tOut);
+    if (style === 'stretch') { tl.to(el, { '--wdth': 50, duration: d, ease: 'power2.in' }, tOut); tl.to(ln, { scaleX: .3, autoAlpha: 0, duration: d, ease: 'power2.in' }, tOut); }
+    tl.set(el, { autoAlpha: 0 }, tOut + d + .012 * ch.length + .02);
+  }
   return el;
 }
-function centre(el, cy = CY) { el.style.top = (cy - el.offsetHeight / 2) + 'px'; return el; }
-function textIn(el, t, { wdth = 100, dur = .95, st = .034, w0 = .55 } = {}) {
-  const chars = el.querySelectorAll('.ch');
-  tl.set(el, { autoAlpha: 0 }, 0).set(el, { autoAlpha: 1 }, t);
-  tl.fromTo(chars, { yPercent: 135 }, { yPercent: 0, duration: dur, ease: 'expo.out', stagger: st, immediateRender: false }, t);
-  tl.fromTo(el, { '--wdth': wdth * w0, '--wght': 500 }, { '--wdth': wdth, '--wght': 900, duration: dur + .25, ease: 'power3.out', immediateRender: false }, t);
-  tl.fromTo(el, { scale: .97 }, { scale: 1.03, duration: 2.0, ease: 'sine.out', immediateRender: false }, t);
-}
-function textOut(el, t, { dur = .45, st = .012 } = {}) {
-  const chars = el.querySelectorAll('.ch');
-  tl.to(chars, { yPercent: -135, duration: dur, ease: 'power2.in', stagger: st }, t);
-  tl.to(el, { '--wdth': 60, duration: dur + st * chars.length, ease: 'power2.in' }, t);
-  tl.set(el, { autoAlpha: 0 }, t + dur + st * chars.length);
-}
 function soft(el, t, tOut) {
-  tl.set(el, { autoAlpha: 0 }, 0).fromTo(el, { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: .6, ease: 'expo.out', immediateRender: false }, t);
-  if (tOut) tl.to(el, { autoAlpha: 0, y: -26, duration: .3, ease: 'power2.in' }, tOut);
+  tl.set(el, { autoAlpha: 0 }, 0).fromTo(el, { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: .55, ease: 'expo.out', immediateRender: false }, t);
+  if (tOut) tl.to(el, { autoAlpha: 0, y: -26, duration: .25, ease: 'power2.in' }, tOut);
 }
-// ---- master schedule lives in timeline.json (beat grid: 120 BPM from the drop at 2.5 s)
 const DUR = T.end;
-let MQ = [];
 function buildType() {
-  // B — after answering the call
-  const b1 = centre(build('b1', { width: 920, wdth: 78 })); textIn(b1, T.b1, { wdth: 78 }); textOut(b1, T.b1o);
-  const b2 = build('b2', { width: 940, wdth: 78 }); b2.querySelectorAll('.ln')[1].style.color = CREAM; centre(b2);
-  textIn(b2, T.b2, { wdth: 78 }); textOut(b2, T.b2o);
-  // D — three verbs
-  for (const [id, t0, t1, col] of [['d1', T.d1, T.d1o, INK], ['d2', T.d2, T.d2o, OR], ['d3', T.d3, T.d3o, INK]]) {
-    const el = centre(build(id, { width: id === 'd1' ? 760 : 900, wdth: 82, color: col })); textIn(el, t0, { wdth: 82, st: .028 }); textOut(el, t1);
-  }
-  // E — OTKUPUJEMO over the exploding particle phone
-  const e1 = build('e1', { width: 960, wdth: 66, color: CREAM }); e1.style.top = (CY - 60 - e1.offsetHeight / 2) + 'px';
-  textIn(e1, T.e1, { wdth: 66, st: .026 }); textOut(e1, T.e1o);
-  const e1s = $('e1s'); e1s.style.fontSize = '80px'; e1s.style.color = OR; e1s.style.top = (CY + 110) + 'px'; soft(e1s, T.e1 + .2, T.e1o - .05);
-  // F — three adjectives, the last one we fly through
-  const f1 = centre(build('f1', { width: 820, wdth: 82 })); textIn(f1, T.f1, { wdth: 82 }); textOut(f1, T.f1o);
-  const f2 = centre(build('f2', { width: 640, wdth: 82 })); textIn(f2, T.f2, { wdth: 82 }); textOut(f2, T.f2o);
-  const f3 = centre(build('f3', { width: 940, wdth: 100, color: OR })); textIn(f3, T.f3, { st: .024 }); tl.set(f3, { autoAlpha: 0 }, T.hero - .02);
-  // CTA — one centred block: ZONA / TELEFONA, pill, handle, services
-  const h1 = build('h1', { widths: [700, 860], wdth: 100 }), h2 = $('h2'), h3 = $('h3'), h4 = $('h4');
-  h3.style.fontSize = '50px'; h3.style.color = INK; h4.style.fontSize = '64px'; h4.style.color = INK;
-  const gaps = [56, 40, 10], hs = [h1.offsetHeight, 168, h3.offsetHeight, h4.offsetHeight];
-  const total = hs.reduce((a, b) => a + b) + gaps.reduce((a, b) => a + b); let y = CY - total / 2 + 10;
-  [h1, h2, h3, h4].forEach((el, i) => { el.style.top = y + 'px'; y += hs[i] + (gaps[i] || 0); });
-  textIn(h1, T.cta, { st: .03 });
-  const pill = h2.querySelector('.pill'), pt = h2.querySelector('.pt');
-  tl.set(h2, { autoAlpha: 0 }, 0).set(h2, { autoAlpha: 1 }, T.pill);
+  word('w1', T.w1, T.w2 - .2, 'rise');
+  word('w2', T.w2, T.cRev - .08, 'stretch');
+  word('nv', T.nv, T.nvOut, 'stretch', { color: CREAM, maxW: 1000, fs0: 470 });       // behind the pair (typeB layer)
+  word('w3', T.w3, T.d2Rev - .08, 'punch');
+  word('w4', T.w4, T.d3Rev - .08, 'slide', { color: CREAM });
+  word('w5', T.w5, T.eRev - .06, 'flip', { color: OR });
+  word('w6', T.w6, T.fRev - .08, 'burst', { color: CREAM });
+  word('w7', T.w7, T.f2Rev - .08, 'rise', { color: OR });
+  word('w8', T.w8, T.f3Rev - .08, 'punch');
+  const w9 = word('w9', T.w9, undefined, 'stretch', { color: CREAM }); tl.set(w9, { autoAlpha: 0 }, T.hero - .02);
+  // CTA: ZONA alone, then it climbs into the lockup while TELEFONA rises under it, then the DM pill
+  const A = $('h1a'), B = $('h1b'), P = $('h2'), Hd = $('h3');
+  Hd.style.fontSize = '50px'; Hd.style.color = INK;
+  const chA = chars(A), chB = chars(B), lnA = A.querySelector('.ln');
+  const fa = fitWord(A, { maxW: 700, fs0: 330 }), fb = fitWord(B, { maxW: 860, fs0: 200 });
+  A.classList.add('mask'); B.classList.add('mask'); A.style.color = B.style.color = INK;
+  const hA = .86 * fa.fs, hB = .86 * fb.fs, gap1 = 6, gap2 = 64, gap3 = 40, hP = 168, hH = 60;
+  const total = hA + gap1 + hB + gap2 + hP + gap3 + hH; let y = CY - total / 2;
+  A.style.top = y + 'px'; y += hA + gap1; B.style.top = y + 'px'; y += hB + gap2; P.style.top = y + 'px'; y += hP + gap3; Hd.style.top = y + 'px';
+  const soloDy = CY - (parseFloat(A.style.top) + capCentre(fa.fs));
+  tl.set(A, { autoAlpha: 0 }, 0).set(A, { autoAlpha: 1 }, T.cta);
+  tl.fromTo(chA, { yPercent: 125 }, { yPercent: 0, duration: .5, ease: 'expo.out', stagger: .035, immediateRender: false }, T.cta);
+  tl.fromTo(A, { '--wdth': fa.wd * .6 }, { '--wdth': fa.wd, duration: .65, ease: 'expo.out', immediateRender: false }, T.cta);
+  tl.fromTo(lnA, { y: soloDy, scale: 1.28 }, { y: 0, scale: 1, duration: .6, ease: 'expo.inOut', immediateRender: false }, T.cta2 - .15);
+  tl.set(B, { autoAlpha: 0 }, 0).set(B, { autoAlpha: 1 }, T.cta2);
+  tl.fromTo(chB, { yPercent: 125 }, { yPercent: 0, duration: .55, ease: 'expo.out', stagger: .03, immediateRender: false }, T.cta2 + .1);
+  const pill = P.querySelector('.pill'), pt = P.querySelector('.pt');
+  tl.set(P, { autoAlpha: 0 }, 0).set(P, { autoAlpha: 1 }, T.pill);
   tl.fromTo(pill, { scaleX: 0, scaleY: .3 }, { scaleX: 1, duration: .75, ease: 'elastic.out(1,.75)', immediateRender: false }, T.pill)
     .fromTo(pill, { scaleY: .3 }, { scaleY: 1, duration: .55, ease: 'back.out(2.5)', immediateRender: false }, T.pill)
     .fromTo(pt, { autoAlpha: 0, x: 40 }, { autoAlpha: 1, x: 0, duration: .5, ease: 'expo.out', immediateRender: false }, T.pill + .2);
-  for (const b of [T.cta + 1.55, T.cta + 2.05]) tl.to(pill, { scale: 1.045, duration: .09, ease: 'power2.out' }, b).to(pill, { scale: 1, duration: .4, ease: 'expo.out' }, b + .09);
-  soft(h3, T.pill + .35, T.outro); soft(h4, T.pill + .55, T.outro + .05);
+  for (const b of [T.pill + 1.0, T.pill + 1.5]) tl.to(pill, { scale: 1.05, duration: .09, ease: 'power2.out' }, b).to(pill, { scale: 1, duration: .4, ease: 'expo.out' }, b + .09);
+  soft(Hd, T.pill + .4, T.outro);
   // outro → loop: everything collapses back into the dot the film starts from
-  textOut(h1, T.outro, { dur: .4, st: .01 });
-  tl.to(pill, { scale: 0, duration: .4, ease: 'back.in(1.8)' }, T.outro + .08).set(h2, { autoAlpha: 0 }, T.outro + .5);
-  // marquee wall behind the pair (scene C)
-  const mq = $('mq'); const words = 'NOVI • NOVI • NOVI • NOVI • NOVI • NOVI • ';
-  for (let i = 0; i < 7; i++) { const r = document.createElement('div'); r.className = 'mrow ' + (i === 3 ? 'f' : 'o'); r.textContent = words; r.style.top = (CY - 125 + (i - 3) * 232) + 'px'; mq.appendChild(r); MQ.push(r); }
+  tl.to([...chA, ...chB], { yPercent: -125, duration: .38, ease: 'power2.in', stagger: .012 }, T.outro);
+  tl.to(pill, { scale: 0, duration: .4, ease: 'back.in(1.8)' }, T.outro + .08).set([P, A, B], { autoAlpha: 0 }, T.outro + .55);
   tl.set({}, {}, DUR);
 }
 
@@ -389,23 +402,22 @@ function buildType() {
 const fxc = $('fx').getContext('2d');
 const grains = [0, 1, 2, 3].map(k => { const d = fxc.createImageData(540, 960); for (let i = 0; i < d.data.length; i += 4) { const v = hash(i * .013 + k * 91.7) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } return d; });
 const glEl = $('gl');
-// background colour story (every change is an eased reveal — never a hard cut)
-reveal(T.cRev, .65, INK, 'c');                    // B → C: black opens from the centre as the pair pops
-reveal(T.dRev, .6, OR, 'b', CREAM);              // C → D: curved wipe from below
-reveal(T.d2Rev, .55, INK, 'c');                  // KUPI → PRODAJ
-reveal(T.d3Rev, .55, CREAM, 't', OR);            // PRODAJ → ZAMENI
-reveal(T.eRev, .58, INK, 'c');                   // → particles
-reveal(T.fRev, .58, CREAM, 'c', OR);              // explosion → BRZO
-reveal(T.f2Rev, .5, OR, 'b');                   // → FER
-reveal(T.f3Rev, .52, INK, 't', CREAM);           // → SIGURNO
-reveal(T.hRev, .65, OR, 'c', CREAM);              // hero → CTA
+// background colour story — every change is an eased reveal that finishes just as the next word lands
+reveal(T.cRev, .45, INK, 'c');                    // → NOVI + the pair
+reveal(T.dRev, .45, OR, 'b', CREAM);              // → KUPI.
+reveal(T.d2Rev, .42, INK, 'c');                   // → PRODAJ.
+reveal(T.d3Rev, .42, CREAM, 't', OR);             // → ZAMENI.
+reveal(T.eRev, .45, INK, 'c');                    // → particles / OTKUPUJEMO
+reveal(T.fRev, .42, CREAM, 'c', OR);              // → BRZO.
+reveal(T.f2Rev, .38, OR, 'b');                    // → FER.
+reveal(T.f3Rev, .38, INK, 't', CREAM);            // → SIGURNO.
+reveal(T.hRev, .5, OR, 'c', CREAM);               // hero → CTA
+function bgAt(t) { let c = t < 2.47 ? INK : OR; for (const r of REV) if (t >= r.t0 + r.dur * .5) c = r.color; return c; }
 
 // fly-through: the O of SIGURNO. is moved to the frame centre while we scale through its counter
-let ZO = null;
 function zoomOrigin(el) {
-  const ch = el.querySelectorAll('.ch')[6], fs = parseFloat(getComputedStyle(ch).fontSize);
-  const c = document.createElement('canvas').getContext('2d'); c.font = `900 ${fs}px "Anybody Variable"`;
-  const m = c.measureText('O'), Lh = parseFloat(getComputedStyle(ch).lineHeight);
+  const ch = el.querySelectorAll('.ch')[6], fs = parseFloat(el.style.fontSize);
+  mctx.font = `900 ${fs}px "Anybody Variable"`; const m = mctx.measureText('O'), Lh = .86 * fs;
   const base = (Lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
   let x = 0, y = 0, n = ch; while (n && n !== el) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
   return { x: x + ch.offsetWidth / 2, y: y + base - (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2 };
@@ -422,8 +434,11 @@ async function setTime(t) {
   // outro: the orange field shrinks back into the dot (last frame == first frame → seamless loop)
   const oc = eInOutCubic(prog(t, T.outro + .38, T.end));
   if (oc > 0) { fill(INK); bg.fillStyle = OR; bg.beginPath(); bg.arc(CX, CY, lerp(1110, DOT, oc), 0, Math.PI * 2); bg.fill(); glow(CX, CY, 260, 'rgba(217,119,87,.7)', .35 * prog(t, T.end - .35, T.end)); }
+  // brand rings behind every word (subtle, contrasting with the current field)
+  const words = (t >= T.w1 && t < T.cRev + .3) || (t >= T.dRev && t < T.eRev + .3) || (t >= T.fRev && t < T.zoom);
+  if (words) { const b = bgAt(t); rings(CX, CY, 170, 115, 7, t, b === INK ? OR : INK, .08, 3); }
 
-  // ---------------- A: the phone pops out of the dark and rings (0 – 2.5)
+  // ---------------- A: the phone pops out of the dot and rings (0 – 2.5)
   if (t < 2.56) {
     useGL = true;
     const pop = spring(t - .02, 1.7, .6), swing = spring(t - .02, 1.35, .66);
@@ -449,10 +464,8 @@ async function setTime(t) {
       sweep: lerp(-.4, 1.4, prog(t, .55, 1.25)), sweepA: .7
     });
   }
-  // ---------------- B: type on orange
-  else if (t < T.cRev + .6) rings(CX, CY, 160, 120, 7, t, INK, .07, 3);
 
-  // ---------------- C: the pair pops from the centre, a wall of NOVI behind it
+  // ---------------- C: NOVI, then the pair pops out in front of it
   if (t >= T.cRev && t < T.pairOut + .45) {
     useGL = true;
     const p = spring(t - T.pair, 1.55, .58), sw = spring(t - T.pair, 1.2, .64);
@@ -461,26 +474,17 @@ async function setTime(t) {
     pairMesh.visible = p > 0 && out < 1;
     const s = Math.max(.001, p * (1 - out)) * (1 + .05 * eInOutSine(prog(t, T.pair + .5, T.pairOut)));
     pairMesh.scale.set(s, s, 1);
-    pairMesh.position.set(0, (1 - p) * -300, 0);
+    pairMesh.position.set(0, (1 - p) * -260, 0);
     pairMesh.rotation.set((1 - sw) * .3, (1 - sw) * .85 + Math.sin((t - T.pair) * 1.3) * .08, (1 - p) * .22 + out * .5);
-    pairMesh.material.uniforms.uSweep.value = lerp(-.4, 1.5, eInOutSine(prog(t, T.pair + .65, T.pair + 1.45))); pairMesh.material.uniforms.uSweepA.value = .8;
-    const mq = $('mq'); mq.style.visibility = t > T.pair && t < T.pairOut + .4 ? 'visible' : 'hidden';
-    MQ.forEach((r, i) => {
-      const d = Math.abs(i - 3), inn = eOutExpo(prog(t, T.pair + .05 + d * .06, T.pair + .8 + d * .06)), o = eInOutCubic(prog(t, T.pairOut - .05 + d * .03, T.pairOut + .3 + d * .03));
-      const dir = i % 2 ? 1 : -1, x = -600 + dir * ((t - T.pair) * 90) + dir * (1 - inn) * 500;
-      r.style.transform = `translateX(${x}px) scaleY(${inn * (1 - o)})`; r.style.opacity = (i === 3 ? 1 : .6 - d * .08) * inn * (1 - o);
-    });
-  } else $('mq').style.visibility = 'hidden';
+    pairMesh.material.uniforms.uSweep.value = lerp(-.4, 1.5, eInOutSine(prog(t, T.pair + .45, T.pair + 1.15))); pairMesh.material.uniforms.uSweepA.value = .8;
+  }
 
-  // ---------------- D: KUPI. PRODAJ. ZAMENI.
-  if (t >= T.dRev && t < T.eRev + .5) rings(CX, CY, 180, 110, 7, t, t < T.d2Rev + .3 ? INK : t < T.d3Rev + .3 ? OR : INK, .08, 3);
-
-  // ---------------- E: particles swirl into the iPhone, it turns real, then bursts
-  if (t >= T.eRev && t < T.fRev + .55) {
+  // ---------------- E: particles swirl into the iPhone, it turns real, then bursts into OTKUPUJEMO
+  if (t >= T.eRev && t < T.fRev + .5) {
     useGL = true; particles.visible = true;
-    const asm = eInOutCubic(prog(t, T.asm, T.asm + 1.0)), ex = prog(t, T.boom, T.boom + 1.15);
+    const asm = eInOutCubic(prog(t, T.asm, T.real + .1)), ex = prog(t, T.boom, T.boom + 1.1);
     pMat.uniforms.uAsm.value = asm; pMat.uniforms.uExp.value = ex; pMat.uniforms.uTime.value = t;
-    const realIn = eInOutCubic(prog(t, T.real, T.real + .24)), realOut = eInOutCubic(prog(t, T.realOut, T.realOut + .12));
+    const realIn = eInOutCubic(prog(t, T.real, T.real + .22)), realOut = eInOutCubic(prog(t, T.realOut, T.realOut + .1));
     pMat.uniforms.uA.value = clamp(prog(t, T.eRev, T.eRev + .3)) * (1 - realIn * .9 + realOut * .9);
     const ry = Math.PI + .75 - eInOutCubic(prog(t, T.asm, T.realOut)) * .95, h = 1130;
     particles.scale.setScalar(h); particles.rotation.set(.06, ry, 0);
@@ -489,17 +493,15 @@ async function setTime(t) {
     glow(CX, CY, 800, 'rgba(217,119,87,.45)', .45 * asm * (1 - ex));
   }
 
-  // ---------------- F: BRZO. FER. SIGURNO. → fly through the O
-  if (t >= T.fRev && t < T.hero) {
-    if (t < T.zoom) rings(CX, CY, 180, 110, 7, t, t < T.f2Rev + .2 ? INK : t < T.f3Rev + .2 ? INK : OR, .08, 3);
-    // pan so the O sits in the frame centre, then fly through its counter
-    const f3 = $('f3'), pan = eInOutCubic(prog(t, T.zoom - .22, T.zoom + .14)), z = prog(t, T.zoom, T.hero);
-    if (pan > 0) {
+  // ---------------- F: fly through the O of SIGURNO.
+  {
+    const f3 = $('w9'), pan = eInOutCubic(prog(t, T.zoom - .22, T.zoom + .14)), z = prog(t, T.zoom, T.hero);
+    if (pan > 0 && t < T.hero) {
       const O = zoomOrigin(f3), top = parseFloat(f3.style.top);
       f3.style.transformOrigin = `${O.x}px ${O.y}px`;
       f3.style.translate = `${(CX - O.x) * pan}px ${(CY - (top + O.y)) * pan}px`;
       f3.style.scale = (1 + .45 * pan) * (1 + Math.pow(z, 2.5) * 75);
-    } else { f3.style.scale = 1; f3.style.translate = '0px 0px'; }
+    } else if (t < T.zoom) { f3.style.scale = 1; f3.style.translate = '0px 0px'; }
   }
 
   // ---------------- G: hero — spotlight, the phone pops up, turns to its back
@@ -542,7 +544,7 @@ async function setTime(t) {
 async function boot() {
   await Promise.all([
     document.fonts.load('900 100px "Anybody Variable"', 'ĆČŠŽĐćčšž?'), document.fonts.load('600 40px "Inter Variable"', 'šž'),
-    document.fonts.load('italic 500 100px "Cormorant Garamond"'), document.fonts.load('500 30px "JetBrains Mono"')]);
+    document.fonts.load('500 30px "JetBrains Mono"')]);
   await document.fonts.ready;
   IMG = { front: await load('assets/front.png'), back: await load('assets/back.png'), pair: await load('assets/pair.png') };
   prepCall();

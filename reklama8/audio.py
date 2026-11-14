@@ -408,6 +408,16 @@ for (a, b, ch) in chords:
         g = .13 if x < S_HERO else .1 if x < S_CTA else .15
         add(pluck(seq[(i * 2) % 8], .3, 3000), x, g * (1 if i % 2 == 0 else .75), pan=.4 * np.sin(i * .9), rev=.15, dly=.22, music=True)
 
+# ---------- a short chord stab on every word (musical punctuation, word-by-word)
+def chord_at(x):
+    for (a_, b_, ch) in chords:
+        if a_ <= x < b_: return ch[1]
+    return Em[1]
+for key in ("w1", "w2", "nv", "w3", "w4", "w5", "w7", "w8", "w9", "cta", "cta2"):
+    x = TL[key]; nts = chord_at(x + .01)
+    add(stab([nts[0] + 12, nts[2] + 12, nts[3] + 12], .32, 3600), x, .26, rev=.25, pan=.15 * np.sin(x * 3))
+    place(duck, -.25 * np.exp(-T(.25) / .08), x)
+
 # ---------- the few sound effects (only on the big moments)
 add(boom(1.6, 90, 32, .7, .5), G0, .8, rev=.4); add(braam(52, 1.3, .6), G0, .4, rev=.4)            # DROP: call answered
 add(whoosh(.5, 250, 3500, .85, 1.2), TL["cRev"] - .1, .45, rev=.3); add(sub_drop(1.2, 95, 34), TL["pair"] + .03, .6)   # pair pops
