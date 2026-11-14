@@ -319,7 +319,7 @@ function fitWord(el, { maxW = 940, fs0 = 400, fsMax = 470 } = {}) {
   if (wAt(50, fs) > maxW) { wd = 50; fs = maxW * 100 / measure(text, 50); }
   else if (wAt(150, fs) < maxW) { wd = 150; fs = Math.min(fsMax, maxW * 100 / measure(text, 150)); }
   else { let lo = 50, hi = 150; for (let i = 0; i < 18; i++) { const m = (lo + hi) / 2; if (wAt(m, fs) > maxW) hi = m; else lo = m; } wd = lo; }
-  el.style.fontSize = fs.toFixed(1) + 'px'; el.style.setProperty('--wdth', wd.toFixed(1));
+  el.style.fontSize = fs.toFixed(1) + 'px'; el.style.setProperty('--wdth', wd.toFixed(1)); el.dataset.wd = wd;
   return { wd, fs };
 }
 function capCentre(fs) {   // y of the cap-height centre inside the block (line-height .86)
@@ -497,6 +497,8 @@ async function setTime(t) {
   {
     const f3 = $('w9'), pan = eInOutCubic(prog(t, T.zoom - .22, T.zoom + .14)), z = prog(t, T.zoom, T.hero);
     if (pan > 0 && t < T.hero) {
+      // open the O up first (width axis → 150) so the camera flies through a wide counter
+      f3.style.setProperty('--wdth', lerp(+f3.dataset.wd, 150, eInOutCubic(prog(t, T.zoom - .3, T.zoom + .08))));
       const O = zoomOrigin(f3), top = parseFloat(f3.style.top);
       f3.style.transformOrigin = `${O.x}px ${O.y}px`;
       f3.style.translate = `${(CX - O.x) * pan}px ${(CY - (top + O.y)) * pan}px`;
