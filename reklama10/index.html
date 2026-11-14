@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<title>ZONA TELEFONA: POV</title>
+<link rel="stylesheet" href="node_modules/@fontsource/anton/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/800.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/900.css">
+<link rel="stylesheet" href="node_modules/@fontsource/montserrat/600.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "gsap": "./node_modules/gsap/index.js" } }
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bgc" width="1080" height="1920"></canvas>
+  <canvas id="gl" width="1080" height="1920"></canvas>
+  <canvas id="fgc" width="1080" height="1920"></canvas>
+  <div id="type" class="layer"></div>
+  <div id="vig"></div>
+  <canvas id="fx" width="540" height="960"></canvas>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

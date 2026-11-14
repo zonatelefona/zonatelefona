@@ -1,0 +1,21 @@
+:root{--or:#D97757;--ink:#0A0A0B;--white:#F5F3F0;--grey:#B9B6B2}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--ink)}
+#stage > *{position:absolute}
+#bgc,#gl,#fgc{left:0;top:0;width:1080px;height:1920px}
+.layer{inset:0;-webkit-font-smoothing:antialiased}
+.ln{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;visibility:hidden;color:var(--white);
+  letter-spacing:calc(var(--ls,0) * 1px);padding-left:calc(var(--ls,0) * 1px);   /* equal left padding cancels the trailing letter-spacing → ink stays centred */
+  text-shadow:0 8px 40px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.35);transform-origin:50% 50%}
+.anton{font-family:'Anton',sans-serif;font-weight:400;line-height:1.02}
+.mont{font-family:'Montserrat',sans-serif;font-weight:900;line-height:1.05}
+.mont8{font-family:'Montserrat',sans-serif;font-weight:800;line-height:1.05}
+.mont6{font-family:'Montserrat',sans-serif;font-weight:600;line-height:1.1}
+.o{color:var(--or)}
+.mk{display:inline-block;overflow:hidden;vertical-align:top;padding:.08em .02em .04em;margin:-.08em -.02em -.04em}
+.w{display:inline-block;transform-origin:50% 70%}
+.ch{display:inline-block;transform-origin:50% 70%}
+.emoji{font-family:'Noto Color Emoji';display:inline-block;transform-origin:50% 80%;text-shadow:none}
+#vig{inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 75% at 50% 48%,rgba(0,0,0,0) 50%,rgba(0,0,0,.45) 100%)}
+#fx{left:0;top:0;width:1080px;height:1920px;opacity:.045;mix-blend-mode:overlay}
