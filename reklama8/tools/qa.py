@@ -12,7 +12,7 @@ W = [('STARI', 'w1', 'w2', 'dark'), ('TELEFON?', 'w2', 'cRev', 'dark'), ('NOVI',
      ('OTKUPUJEMO', 'w6', 'fRev', 'light'), ('BRZO.', 'w7', 'f2Rev', 'or'), ('FER.', 'w8', 'f3Rev', 'dark'), ('SIGURNO.', 'w9', 'zoom', 'light')]
 bad = 0
 for name, a, b, mode in W:
-    t0, t1 = (T[a] + .25, T[b] + .02) if name == 'NOVI' else (T[a] + .4, T[b] + .02)
+    t0, t1 = (T[a] + .25, T[b] + .02) if name == 'NOVI' else (T[a] + .4, T[b] - .2) if name == 'STARI' else (T[a] + .4, T[b] + .02)   # only while the word is held
     xs, ys = [], []
     for t in np.arange(t0, t1, .05):
         im = np.asarray(Image.open(f'{D}/{round(t * 120):05d}.jpg').convert('RGB')).astype(int)[760:1180]
