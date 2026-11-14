@@ -375,14 +375,18 @@ add(line_riser(.7), 2.3, .45, rev=.3); add(whoosh(.5, 250, 5000, .8, 1.3), T_['s
 add(metal_slide(.9), 3.3, .35, rev=.5); add(shimmer(2.0), 3.35, .55, rev=.6)                        # macro: metallic shimmer
 add(whoosh(.45, 400, 3800, .85, 1.1), T_['aliOnda'] - .3, .38, rev=.3)
 add(whoosh(.4, 300, 4500, .85, 1.2), T_['video'] - .3, .45, rev=.3); add(sub_drop(1.4, 95, 32), T_['video'] + .25, .75); add(boom(1.6, 80, 32, .6, .4), T_['video'] + .25, .5, rev=.4)
-add(whoosh(.5, 600, 7000, .7, 1.0), T_['s2out'] - .05, .6, pan=np.linspace(.8, -.8, int(.5 * SR)), rev=.2)   # whip pan
-add(reverse_swell(.4), T_['s3'] - .4, .4)
-add(whoosh(.5, 500, 6000, .75, 1.0), T_['s26'] - .2, .5, pan=np.linspace(.8, -.3, int(.5 * SR)), rev=.2)
-add(metal_slide(.7), 9.6, .3, rev=.4)
-add(whoosh(.45, 400, 5000, .8, 1.1), T_['air'] - .25, .45, rev=.3); add(shimmer(1.6), T_['air'] + .1, .35, rev=.6)
+add(whoosh(.55, 150, 2600, .92, 1.4), T_['s2out'], .6, rev=.25); add(sub_drop(1.0, 80, 30), T_['s3'] - .02, .45)   # push into the screen → black
+add(spot_thunk(), T_['s3'], .45, rev=.4)                                                              # studio light on
+add(whoosh(.6, 300, 3800, .5, 1.2), T_['p2'] - .3, .45, pan=np.linspace(.6, -.6, int(.6 * SR)), rev=.25)          # camera truck → Galaxy S26 Ultra
+add(whoosh(.6, 300, 3800, .5, 1.2), T_['p3'] - .3, .45, pan=np.linspace(.6, -.6, int(.6 * SR)), rev=.25); add(shimmer(1.4), T_['p3'] + .1, .3, rev=.6)   # → iPhone Air
 for k in ('nemozes', 'prestanes', 'gledas'): add(stab([n + 12 for n in chord_at(T_[k] + .01)[1][:3]], .35, 3500), T_[k], .3, rev=.3, music=False)
 add(tick_hi(2600), T_['rekao'], .2, rev=.3)
-add(whoosh(.55, 200, 2500, .9, 1.4), T_['s4push'], .45, rev=.2)                                       # the sudden push-in
+def send_pop(f=1500):                                                                                   # original 'message sent' blip (not a platform sound)
+    t = T(.18); return (np.sin(2 * np.pi * f * t * (1 + .35 * np.exp(-t / .015))) * np.exp(-t / .05) * .32 + bp(noise(len(t)), 3000, 1.5) * np.exp(-t / .006) * .12)
+for i, k in enumerate(('b1', 'b2', 'b3', 'b4')): add(send_pop(1350 + i * 140), T_[k], .5 + i * .06, pan=.25, rev=.15)
+add(tick_hi(2400), T_['seen'], .12)
+add(whoosh(.45, 200, 2500, .9, 1.4), T_['tapeStop'] - .05, .4, rev=.2)                                    # the sudden push-in
+add(send_pop(980), T_['reply'], .55, pan=-.25, rev=.2); add(send_pop(1240), T_['reply'] + .07, .35, pan=-.25)   # their reply
 # punchline: impact + a short, dry two-note "wink" (no cartoon effects)
 add(boom(2.0, 90, 30, .8, .9), T_['punch'], .9, rev=.45); add(snare(), T_['punch'], .45, rev=.3)
 add(pluck(74, .25, 4200) * 1.4, T_['punch'] + .1, .55, pan=-.2, rev=.25); add(pluck(81, .35, 4200) * 1.4, T_['punch'] + .24, .55, pan=.2, rev=.3)
