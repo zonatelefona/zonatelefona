@@ -8,7 +8,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
 .blk{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;visibility:hidden}
 .word{font-family:'Anybody Variable',sans-serif;line-height:.86;
   --wdth:100;--wght:900;font-variation-settings:'wdth' var(--wdth),'wght' var(--wght)}
-.ln{display:block;overflow:visible;padding:.2em .3em .08em;margin:-.2em 0 -.08em}
+.ln{display:block;overflow:visible;padding:.2em 0 .08em;margin:-.2em 0 -.08em}
 .mask .ln{overflow:hidden}
 .ch{display:inline-block;transform-origin:50% 60%}
 .blk.word{transform-origin:50% 50%}
