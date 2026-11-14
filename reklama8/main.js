@@ -359,15 +359,15 @@ function soft(el, t, tOut) {
 }
 const DUR = T.end;
 function buildType() {
-  word('w1', T.w1, T.w2 - .2, 'rise');
-  word('w2', T.w2, T.cRev - .08, 'stretch');
+  word('w1', T.w1, T.w2 - .17, 'rise');
+  word('w2', T.w2, T.cRev + .02, 'stretch');
   word('nv', T.nv, T.nvOut, 'stretch', { color: CREAM, maxW: 1000, fs0: 470 });       // behind the pair (typeB layer)
-  word('w3', T.w3, T.d2Rev - .08, 'punch');
-  word('w4', T.w4, T.d3Rev - .08, 'slide', { color: CREAM });
-  word('w5', T.w5, T.eRev - .06, 'flip', { color: OR });
-  word('w6', T.w6, T.fRev - .08, 'burst', { color: CREAM });
-  word('w7', T.w7, T.f2Rev - .08, 'rise', { color: OR });
-  word('w8', T.w8, T.f3Rev - .08, 'punch');
+  word('w3', T.w3, T.d2Rev + .05, 'punch');
+  word('w4', T.w4, T.d3Rev + .05, 'slide', { color: CREAM });
+  word('w5', T.w5, T.eRev + .03, 'flip', { color: OR });
+  word('w6', T.w6, T.fRev - .1, 'burst', { color: CREAM });
+  word('w7', T.w7, T.f2Rev + .05, 'rise', { color: OR });
+  word('w8', T.w8, T.f3Rev + .05, 'punch');
   const w9 = word('w9', T.w9, undefined, 'stretch', { color: CREAM }); tl.set(w9, { autoAlpha: 0 }, T.hero - .02);
   // CTA: ZONA alone, then it climbs into the lockup while TELEFONA rises under it, then the DM pill
   const A = $('h1a'), B = $('h1b'), P = $('h2'), Hd = $('h3');
