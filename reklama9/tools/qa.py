@@ -13,11 +13,11 @@ W = [('STARI', 'w1', 'w2', 'dark'), ('TELEFON?', 'w2', 'cRev', 'dark'), ('NOVI',
      ('OTKUPUJEMO', 'w6', 'fRev', 'light'), ('BRZO.', 'w7', 'f2Rev', 'or'), ('FER.', 'w8', 'f3Rev', 'dark'), ('SIGURNO.', 'w9', 'zoom', 'light')]
 bad = 0
 for name, a, b, mode in W:
-    t0, t1 = (T[a] + .25, T[b] + .02) if name == 'NOVI' else (T[a] + .4, T[b] - .2) if name == 'STARI' else (T[a] + .4, T[b] + .02)   # only while the word is held
+    t0, t1 = (T[a] + .25, T[b] + .02) if name == 'NOVI' else (T[a] + .4, T[b] - .2) if name == 'STARI' else (T[a] + .4, T[b] - .25) if name == 'SIGURNO.' else (T[a] + .4, T[b] + .02)   # only while the word is held (SIGURNO.: before the pan)
     xs, ys = [], []
     for t in np.arange(t0, t1, .05):
         im = np.asarray(Image.open(f'{D}/{round(t * 120):05d}.jpg').convert('RGB')).astype(int)[B0:B1]
-        m = mask(im, mode); c = np.where(m.sum(0) > 6)[0]; r = np.where(m.sum(1) > 6)[0]
+        m = mask(im, mode); c = np.where(m.sum(0) > 6)[0]; r = np.where(m.sum(1) > 30)[0]   # rows: ignore stray particles
         if len(c) and len(r): xs.append((c[0] + c[-1]) / 2); ys.append(B0 + (r[0] + r[-1]) / 2)
     dx = max(abs(x - XC) for x in xs); dy = max(abs(y - YC) for y in ys)
     flag = 'OK' if dx <= 8 and dy <= 14 else 'CHECK'; bad += flag != 'OK'

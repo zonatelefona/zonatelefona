@@ -329,8 +329,11 @@ function capCentre(fs) {   // y of the cap-height centre inside the block (line-
   return base - m.actualBoundingBoxAscent / 2;
 }
 const EX = { rise: .2, punch: .2, slide: .22, flip: .22, burst: .22, stretch: .22 };
+// optical centring: glyph side-bearings are asymmetric at these huge sizes (offsets measured with tools/qa.py)
+const OPT = { w1: 9.7, nv: 7.7, w8: 4.5 };
 function word(id, tIn, tOut, style, { color = INK, maxW = 1560, fs0 = 470, cy = CY } = {}) {
   const el = $(id), ch = chars(el), ln = el.querySelector('.ln'); el.style.color = color;
+  if (OPT[id]) { el.style.left = OPT[id] + 'px'; el.style.right = -OPT[id] + 'px'; }
   const { wd, fs } = fitWord(el, { maxW, fs0 }); el.style.top = (cy - capCentre(fs)) + 'px';
   if (style === 'rise') el.classList.add('mask');
   tl.set(el, { autoAlpha: 0 }, 0).set(el, { autoAlpha: 1 }, tIn);
