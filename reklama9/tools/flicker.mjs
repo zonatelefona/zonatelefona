@@ -18,7 +18,7 @@ const out = await pg.evaluate(() => {
       // clipped by its mask line?
       const ln = ch.closest('.ln'); if (ln && getComputedStyle(ln).overflow === 'hidden') { const lr = ln.getBoundingClientRect(); if (r.top >= lr.bottom - 2 || r.bottom <= lr.top + 2) return; }
       const key = (ch.closest('.blk') || {}).id + ':' + i; cur.set(key, [r.left + r.width / 2, r.top + r.height / 2]);
-      const p = prev.get(key); if (p) { const d = Math.hypot(p[0] - cur.get(key)[0], p[1] - cur.get(key)[1]); if (d > 150) res.push(`${t.toFixed(3)} ${key} jumped ${d.toFixed(0)}px`); }
+      const p = prev.get(key); if (p) { const d = Math.hypot(p[0] - cur.get(key)[0], p[1] - cur.get(key)[1]); if (d > 150 * innerWidth / 1080) res.push(`${t.toFixed(3)} ${key} jumped ${d.toFixed(0)}px`); }
       else if (gone.has(key) && t - gone.get(key) < .6) res.push(`${t.toFixed(3)} ${key} flickered (hidden at ${gone.get(key).toFixed(3)}, back now)`);
     });
     for (const k of prev.keys()) if (!cur.has(k)) gone.set(k, t);
