@@ -1,6 +1,6 @@
 # ZONA TELEFONA: motion design spot (v8)
 
-21 s, 1080×1920, **60 fps** (renderuje se na 120 fps, pa se po dva kadra spajaju u jedan, što daje pravi motion blur). Boje: Claude Orange #D97757 + crna + krem.
+24,9 s, 1080×1920, **60 fps**, **savršen loop** (renderuje se na 120 fps, pa se po dva kadra spajaju u jedan, što daje pravi motion blur). Boje: Claude Orange #D97757 + crna + krem.
 
 **Šta je novo u odnosu na v7.1**
 - Telefoni se nikad ne otkrivaju kroz okvir ili prozor. Svaki telefon je isečena slika koja **iskoči** iz centra (opruga sa blagim prebačajem i 3D zamahom) i živi u Three.js sceni, pa ima pravu perspektivu i debljinu kad se okrene.
@@ -11,14 +11,20 @@
 
 | Vreme | Kadar |
 |---|---|
-| 0–2,5 | iPhone iskače iz mraka i zvoni (poziv „Tvoj novi iPhone“), prevlačenje za odgovor, uletanje u ekran |
-| 2,5–4,9 | **STARI TELEFON?** → **ZAMENI GA ZA NOVI.** (drop na 2,5 s) |
-| 4,7–7,0 | Crna se otvara iz centra, iPhone 17 Pro (par) iskače, a iza njega je zid teksta „NOVI“ koji klizi |
-| 6,7–9,8 | **KUPI. / PRODAJ. / ZAMENI.**, svaka reč na svojoj boji |
-| 9,8–12,2 | Čestice se u vrtlogu skupljaju u iPhone, on postane pravi, pa eksplodira: **OTKUPUJEMO**, brza procena · fer cena |
-| 12,2–15,5 | **BRZO. / FER. / SIGURNO.**, pa prolaz kroz slovo „O“ |
-| 15,5–18,0 | Reflektor, telefon iskače na sjajnom podu sa refleksijom i okreće se na poleđinu (Cosmic Orange) |
-| 18,0–21,0 | CTA: **ZONA TELEFONA**, **POŠALJI DM** (uleće papirni avion), @zona.telefona, kupovina · otkup · zamena |
+| 0,0–2,5 | iPhone iskače iz tačke i zvoni (poziv „Tvoj novi iPhone“), prevlačenje za odgovor, uletanje u ekran |
+| 2,5–5,5 | **STARI TELEFON?** → **ZAMENI GA ZA NOVI.** (drop na 2,5 s) |
+| 5,5–7,3 | Crna se otvara iz centra, iPhone 17 Pro (par) iskače, a iza njega je zid teksta „NOVI“ koji klizi |
+| 7,3–11,6 | **KUPI. / PRODAJ. / ZAMENI.**, svaka reč na svojoj boji |
+| 11,6–14,5 | Čestice se u vrtlogu skupljaju u iPhone, on postane pravi, pa eksplodira: **OTKUPUJEMO**, brza procena · fer cena |
+| 14,5–18,9 | **BRZO. / FER. / SIGURNO.**, pa prolaz kroz slovo „O“ |
+| 18,9–21,2 | Reflektor, telefon iskače na sjajnom podu sa refleksijom i okreće se na poleđinu (Cosmic Orange) |
+| 21,2–24,9 | CTA: **ZONA TELEFONA**, **POŠALJI DM** (uleće papirni avion), @zona.telefona, kupovina · otkup · zamena, pa skupljanje u tačku (loop) |
+
+**v8.1: sporije reči + loop**
+- Svaki tekst duže ostaje na ekranu. Slova sporije ulaze i izlaze, a prelazi boja su malo sporiji.
+- **Loop bez spoja:** film počinje i završava se istim kadrom, malom narandžastom tačkom sa sjajem na crnom. Na kraju se CTA skloni, a narandžasta se skupi u tu tačku. Na početku telefon iskače iz nje.
+- Zvuk je kružan: reverb, eho i rep zvona sa kraja nastavljaju se na početak, a pred spoj ide „usisavanje“ u tačku. Uzorci se na spoju poklapaju, pa nema klika.
+- Sva vremena su u `timeline.json`, koji zajedno čitaju `main.js` i `audio.py`.
 
 **Build:** `./render.sh` (traži `node_modules` kao simlink na `../reklama/node_modules`, Playwright i ffmpeg).
 **Slike** (`assets/`, nisu u repozitorijumu): zvanične Apple fotografije iPhone 17 Pro (Newsroom). `front.png` i `pair.png` su isečene pomoću `tools/prep.py`. `back.png` je zvanična srebrna poleđina, prebojena u Cosmic Orange pomoću `tools/recolor_back.py`. Licencna upozorenja su ista kao ranije.

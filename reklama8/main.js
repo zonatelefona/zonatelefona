@@ -3,6 +3,7 @@
 // Deterministic: setTime(t) draws exactly the frame at time t.
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import T from './timeline.json' with { type: 'json' };   // shared with audio.py
 
 const W = 1080, H = 1920, CX = 540, CY = 960;
 const OR = '#D97757', INK = '#0A0A0A', CREAM = '#F4E9DC';
@@ -324,16 +325,16 @@ function build(id, { color = INK, width = 900, wdth = 100, widths } = {}) {
   return el;
 }
 function centre(el, cy = CY) { el.style.top = (cy - el.offsetHeight / 2) + 'px'; return el; }
-function textIn(el, t, { wdth = 100, dur = .8, st = .03, w0 = .5 } = {}) {
+function textIn(el, t, { wdth = 100, dur = .95, st = .034, w0 = .55 } = {}) {
   const chars = el.querySelectorAll('.ch');
   tl.set(el, { autoAlpha: 0 }, 0).set(el, { autoAlpha: 1 }, t);
   tl.fromTo(chars, { yPercent: 135 }, { yPercent: 0, duration: dur, ease: 'expo.out', stagger: st, immediateRender: false }, t);
   tl.fromTo(el, { '--wdth': wdth * w0, '--wght': 500 }, { '--wdth': wdth, '--wght': 900, duration: dur + .25, ease: 'power3.out', immediateRender: false }, t);
-  tl.fromTo(el, { scale: .97 }, { scale: 1.03, duration: 1.6, ease: 'sine.out', immediateRender: false }, t);
+  tl.fromTo(el, { scale: .97 }, { scale: 1.03, duration: 2.0, ease: 'sine.out', immediateRender: false }, t);
 }
-function textOut(el, t, { dur = .34, st = .01 } = {}) {
+function textOut(el, t, { dur = .45, st = .012 } = {}) {
   const chars = el.querySelectorAll('.ch');
-  tl.to(chars, { yPercent: -135, duration: dur, ease: 'power3.in', stagger: st }, t);
+  tl.to(chars, { yPercent: -135, duration: dur, ease: 'power2.in', stagger: st }, t);
   tl.to(el, { '--wdth': 60, duration: dur + st * chars.length, ease: 'power2.in' }, t);
   tl.set(el, { autoAlpha: 0 }, t + dur + st * chars.length);
 }
@@ -341,16 +342,7 @@ function soft(el, t, tOut) {
   tl.set(el, { autoAlpha: 0 }, 0).fromTo(el, { autoAlpha: 0, y: 26 }, { autoAlpha: 1, y: 0, duration: .6, ease: 'expo.out', immediateRender: false }, t);
   if (tOut) tl.to(el, { autoAlpha: 0, y: -26, duration: .3, ease: 'power2.in' }, tOut);
 }
-// ---- master schedule (seconds). Beat grid: 120 BPM starting at the drop (2.5)
-const T = {
-  drop: 2.5, b1: 2.5, b1o: 3.38, b2: 3.88, b2o: 4.55,
-  cRev: 4.72, pair: 4.95, pairOut: 6.5, dRev: 6.68,
-  d1: 7.0, d1o: 7.62, d2Rev: 7.78, d2: 8.0, d2o: 8.62, d3Rev: 8.76, d3: 9.0, d3o: 9.62,
-  eRev: 9.78, asm: 9.8, real: 10.62, realOut: 11.0, boom: 11.05, e1: 11.0, e1o: 11.82,
-  fRev: 12.15, f1: 12.5, f1o: 13.12, f2Rev: 13.25, f2: 13.5, f2o: 14.05, f3Rev: 14.2, f3: 14.42, zoom: 15.1,
-  hero: 15.5, flip: 16.5, shrink: 17.6, hRev: 17.85,
-  cta: 18.05, pill: 18.5, plane: 18.62, end: 21.0
-};
+// ---- master schedule lives in timeline.json (beat grid: 120 BPM from the drop at 2.5 s)
 const DUR = T.end;
 let MQ = [];
 function buildType() {
@@ -382,8 +374,11 @@ function buildType() {
   tl.fromTo(pill, { scaleX: 0, scaleY: .3 }, { scaleX: 1, duration: .75, ease: 'elastic.out(1,.75)', immediateRender: false }, T.pill)
     .fromTo(pill, { scaleY: .3 }, { scaleY: 1, duration: .55, ease: 'back.out(2.5)', immediateRender: false }, T.pill)
     .fromTo(pt, { autoAlpha: 0, x: 40 }, { autoAlpha: 1, x: 0, duration: .5, ease: 'expo.out', immediateRender: false }, T.pill + .2);
-  for (const b of [19.5, 20.0, 20.5]) tl.to(pill, { scale: 1.045, duration: .09, ease: 'power2.out' }, b).to(pill, { scale: 1, duration: .4, ease: 'expo.out' }, b + .09);
-  soft(h3, T.pill + .35); soft(h4, T.pill + .55);
+  for (const b of [T.cta + 1.55, T.cta + 2.05]) tl.to(pill, { scale: 1.045, duration: .09, ease: 'power2.out' }, b).to(pill, { scale: 1, duration: .4, ease: 'expo.out' }, b + .09);
+  soft(h3, T.pill + .35, T.outro); soft(h4, T.pill + .55, T.outro + .05);
+  // outro → loop: everything collapses back into the dot the film starts from
+  textOut(h1, T.outro, { dur: .4, st: .01 });
+  tl.to(pill, { scale: 0, duration: .4, ease: 'back.in(1.8)' }, T.outro + .08).set(h2, { autoAlpha: 0 }, T.outro + .5);
   // marquee wall behind the pair (scene C)
   const mq = $('mq'); const words = 'NOVI • NOVI • NOVI • NOVI • NOVI • NOVI • ';
   for (let i = 0; i < 7; i++) { const r = document.createElement('div'); r.className = 'mrow ' + (i === 3 ? 'f' : 'o'); r.textContent = words; r.style.top = (CY - 125 + (i - 3) * 232) + 'px'; mq.appendChild(r); MQ.push(r); }
@@ -395,15 +390,15 @@ const fxc = $('fx').getContext('2d');
 const grains = [0, 1, 2, 3].map(k => { const d = fxc.createImageData(540, 960); for (let i = 0; i < d.data.length; i += 4) { const v = hash(i * .013 + k * 91.7) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } return d; });
 const glEl = $('gl');
 // background colour story (every change is an eased reveal — never a hard cut)
-reveal(T.cRev, .6, INK, 'c');                    // B → C: black opens from the centre as the pair pops
+reveal(T.cRev, .65, INK, 'c');                    // B → C: black opens from the centre as the pair pops
 reveal(T.dRev, .6, OR, 'b', CREAM);              // C → D: curved wipe from below
-reveal(T.d2Rev, .46, INK, 'c');                  // KUPI → PRODAJ
-reveal(T.d3Rev, .48, CREAM, 't', OR);            // PRODAJ → ZAMENI
-reveal(T.eRev, .52, INK, 'c');                   // → particles
-reveal(T.fRev, .5, CREAM, 'c', OR);              // explosion → BRZO
-reveal(T.f2Rev, .42, OR, 'b');                   // → FER
-reveal(T.f3Rev, .45, INK, 't', CREAM);           // → SIGURNO
-reveal(T.hRev, .6, OR, 'c', CREAM);              // hero → CTA
+reveal(T.d2Rev, .55, INK, 'c');                  // KUPI → PRODAJ
+reveal(T.d3Rev, .55, CREAM, 't', OR);            // PRODAJ → ZAMENI
+reveal(T.eRev, .58, INK, 'c');                   // → particles
+reveal(T.fRev, .58, CREAM, 'c', OR);              // explosion → BRZO
+reveal(T.f2Rev, .5, OR, 'b');                   // → FER
+reveal(T.f3Rev, .52, INK, 't', CREAM);           // → SIGURNO
+reveal(T.hRev, .65, OR, 'c', CREAM);              // hero → CTA
 
 // fly-through: the O of SIGURNO. is moved to the frame centre while we scale through its counter
 let ZO = null;
@@ -415,6 +410,7 @@ function zoomOrigin(el) {
   let x = 0, y = 0, n = ch; while (n && n !== el) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
   return { x: x + ch.offsetWidth / 2, y: y + base - (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2 };
 }
+const DOT = 16;
 const ring = (t, a, b) => { const p = prog(t, a, b); return p > 0 && p < 1 ? Math.sin(Math.PI * p) ** .3 : 0; };
 
 async function setTime(t) {
@@ -423,6 +419,9 @@ async function setTime(t) {
   phone.g.visible = mirror.g.visible = pairMesh.visible = particles.visible = hero.visible = false;
   let useGL = false;
   drawReveals(t, t < 2.47 ? INK : OR);
+  // outro: the orange field shrinks back into the dot (last frame == first frame → seamless loop)
+  const oc = eInOutCubic(prog(t, T.outro + .38, T.end));
+  if (oc > 0) { fill(INK); bg.fillStyle = OR; bg.beginPath(); bg.arc(CX, CY, lerp(1110, DOT, oc), 0, Math.PI * 2); bg.fill(); glow(CX, CY, 260, 'rgba(217,119,87,.7)', .35 * prog(t, T.end - .35, T.end)); }
 
   // ---------------- A: the phone pops out of the dark and rings (0 – 2.5)
   if (t < 2.56) {
@@ -432,6 +431,10 @@ async function setTime(t) {
     const jz = vib * (Math.sin(t * 2 * Math.PI * 23) * .016 + Math.sin(t * 2 * Math.PI * 37) * .007);
     const jx = vib * Math.sin(t * 2 * Math.PI * 29) * 5;
     const zoom = eInOutQuart(prog(t, 2.08, 2.5));
+    if (t < .4) {     // loop anchor: same dot + glow the outro ends on; the phone pops out of it
+      glow(CX, CY, 260, 'rgba(217,119,87,.7)', .35 * (1 - prog(t, 0, .3)));
+      bg.fillStyle = OR; bg.beginPath(); bg.arc(CX, CY, DOT * (1 - eOutCubic(prog(t, .03, .3))), 0, Math.PI * 2); bg.fill();
+    }
     if (t < 2.5) {
       dust(t, clamp(prog(t, .1, .6)) * (1 - zoom));
       glow(CX, CY, 900, 'rgba(217,119,87,.55)', .55 * clamp(pop) * (1 - zoom) * (1 + .25 * vib));
@@ -440,7 +443,7 @@ async function setTime(t) {
     drawCall(t);
     phone.front.material.uniforms.map.value = callTex;
     phone.set({
-      x: CX + jx, y: CY + (1 - pop) * 480 + Math.sin(t * 1.6) * 6 * (1 - zoom),
+      x: CX + jx, y: CY + (1 - pop) * 40 + Math.sin(t * 1.6) * 6 * (1 - zoom),
       z: zoom * (CAMZ * .62), h: 1150 * Math.max(.001, pop),
       rx: (1 - swing) * .35, ry: (1 - swing) * -1.0, rz: (1 - pop) * -.3 + jz,
       sweep: lerp(-.4, 1.4, prog(t, .55, 1.25)), sweepA: .7
@@ -520,13 +523,14 @@ async function setTime(t) {
 
   // ---------------- H: CTA
   if (t >= T.hRev + .3) {
-    rings(CX, CY, 220, 120, 8, t, INK, .13 * clamp(prog(t, T.hRev + .3, T.hRev + .8)), 4, .25);
+    rings(CX, CY, 220, 120, 8, t, INK, .13 * clamp(prog(t, T.hRev + .3, T.hRev + .8)) * (1 - prog(t, T.outro, T.outro + .4)), 4, .25);
     const slot = $('h2').querySelector('.slot').getBoundingClientRect(), pl = $('plane');
     const p = prog(t, T.plane, T.plane + .68);
     if (p > 0) {
       const e = eOutCubic(p), x0 = -160, y0 = 1650, x1 = slot.left, y1 = slot.top, mx = 200, my = 1000;
       const x = (1 - e) ** 2 * x0 + 2 * (1 - e) * e * mx + e * e * x1, y = (1 - e) ** 2 * y0 + 2 * (1 - e) * e * my + e * e * y1;
-      pl.style.visibility = 'visible'; pl.style.transform = `translate(${x}px,${y}px) rotate(${lerp(-35, 0, e)}deg) scale(${lerp(1.8, 1, e)})`;
+      const k = 1 - eInBack(prog(t, T.outro + .08, T.outro + .48));
+      pl.style.visibility = k > 0 ? 'visible' : 'hidden'; pl.style.transform = `translate(${x}px,${y}px) rotate(${lerp(-35, 0, e)}deg) scale(${lerp(1.8, 1, e) * Math.max(0, k)})`;
     } else pl.style.visibility = 'hidden';
   } else $('plane').style.visibility = 'hidden';
 

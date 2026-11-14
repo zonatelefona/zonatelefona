@@ -3,11 +3,12 @@ The phone rings with an original marimba phrase in the familiar smartphone style
 There are only a few effects, all on the big visual moments.
 usage: python3 audio.py out.wav
 """
-import sys, wave
+import sys, wave, json, os
 import numpy as np
 
 SR = 48000
-DUR = 21.0
+TL = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeline.json")))
+DUR = TL["end"]
 N = int(SR * DUR)
 rng = np.random.default_rng(777)
 BEAT = 0.5
@@ -47,10 +48,10 @@ def tvfilt(x, fc_fn, mode='bp', bw=1.0, block=2048):
     return out[block:block + len(x)]
 
 def place(buf, sig, t0, gain=1.0):
-    i0 = int(round(t0 * SR))
-    if i0 < 0: sig = sig[-i0:]; i0 = 0
-    n = min(len(sig), N - i0)
-    if n > 0: buf[i0:i0 + n] += sig[:n] * gain
+    """circular: whatever runs past the end continues at the start (the spot is a seamless loop)"""
+    i = int(round(t0 * SR)) % N; k = 0
+    while k < len(sig):
+        m = min(len(sig) - k, N - i); buf[i:i + m] += sig[k:k + m] * gain; k += m; i = 0
 
 def add(sig, t0, gain=1.0, pan=0.0, rev=0.0, dly=0.0, music=False):
     """pan may be scalar or array (same length as sig)"""
@@ -350,9 +351,13 @@ swipe = tvfilt(noise(int(.32 * SR)), lambda z: 1200 + 3000 * z / .32, 'bp', 1.0)
 add(swipe, 1.82, .5, pan=np.linspace(-.5, .5, len(swipe)))                         # slide to answer
 add(whoosh(.45, 300, 5200, .9, 1.2), 2.06, .75, rev=.3); add(reverse_swell(.42), 2.08, .7)   # fly into the screen
 
-# ---------- music
+# ---------- music (sections follow timeline.json, snapped to the 120 BPM grid that starts at the drop)
+def snap(x): return G0 + round((x - G0) / .5) * .5
+S_ASM, S_BOOM, S_ZOOM, S_HERO, S_CTA, S_OUT = snap(TL["asm"]), snap(TL["boom"]), snap(TL["zoom"]), snap(TL["hero"]), snap(TL["hRev"] + .2), snap(TL["outro"])
 Em = (28, [52, 55, 59, 64, 66]); C = (24, [48, 52, 55, 59, 64]); G = (31, [50, 55, 59, 62, 67]); D = (26, [50, 54, 57, 62, 66])
-chords = [(2.5, 4.5, Em), (4.5, 6.5, C), (6.5, 8.5, G), (8.5, 10.5, D), (10.5, 12.5, Em), (12.5, 14.5, C), (14.5, 15.5, D), (15.5, 17.5, Em), (17.5, 18.0, C), (18.0, 21.0, Em)]
+cuts = [G0, snap(TL["cRev"]), snap(TL["dRev"]), snap(TL["d3Rev"]), S_ASM, S_BOOM, snap(TL["fRev"]), snap(TL["f3Rev"]), S_HERO, snap(TL["flip"]), S_CTA, S_OUT + .5]
+prog_ = [Em, C, G, D, Em, Em, C, D, Em, C, Em]
+chords = [(cuts[i], cuts[i + 1], prog_[i]) for i in range(len(prog_))]
 ARP = {id(Em): [64, 67, 71, 74, 76, 74, 71, 67], id(C): [64, 67, 72, 76, 79, 76, 72, 67], id(G): [62, 67, 71, 74, 79, 74, 71, 67], id(D): [62, 66, 69, 74, 78, 74, 69, 66]}
 def root_at(x):
     for (a, b, ch) in chords:
@@ -363,13 +368,14 @@ for (a, b, (root, notes)) in chords:
     st = max(0, a - .02); ln = b - st + .6; t = T(ln)
     ev = np.minimum(1, t / .3) * np.where(t > b - st, np.exp(-(t - (b - st)) / .3), 1)
     for k, m in enumerate(notes):
-        s = supersaw(m, ln, 5, .1) * ev * .06; pan = -.6 if k % 2 == 0 else .6
-        place(padL, s * np.cos((pan + 1) * np.pi / 4), st); place(padR, s * np.sin((pan + 1) * np.pi / 4), st)
+        s_ = supersaw(m, ln, 5, .1) * ev * .06; pan = -.6 if k % 2 == 0 else .6
+        place(padL, s_ * np.cos((pan + 1) * np.pi / 4), st); place(padR, s_ * np.sin((pan + 1) * np.pi / 4), st)
 def pad_cut(x):
-    if x < 2.5: return 400
-    if 9.8 <= x < 11.05: return 1700 * (1 - .75 * (x - 9.8) / 1.25)          # filter closes while the particles gather
-    if 15.0 <= x < 15.5: return 1700 + 5000 * (x - 15.0) / .5                # opens through the O
-    if 15.5 <= x < 18.0: return 1300
+    if x < G0: return 400
+    if S_ASM <= x < S_BOOM: return 1700 * (1 - .75 * (x - S_ASM) / (S_BOOM - S_ASM))      # closes while the particles gather
+    if S_ZOOM - .5 <= x < S_HERO: return 1700 + 5000 * (x - S_ZOOM + .5) / (S_HERO - S_ZOOM + .5)   # opens through the O
+    if S_HERO <= x < S_CTA: return 1300
+    if x >= S_OUT: return max(500, 1800 - 1300 * (x - S_OUT) / .7)
     return 1800
 padL = tvfilt(padL, pad_cut, 'lp'); padR = tvfilt(padR, pad_cut, 'lp')
 musL += padL; musR += padR; revS += (padL + padR) * .15
@@ -382,63 +388,66 @@ def full_bar(x0, x1, hats=True, claps=True, g=.85):
         if claps and k % 2 == 1: add(CL, x, .33, rev=.3)
         if hats: add(hat(.02), x + .25, .22, pan=.3)
         x += .5; k += 1
-full_bar(2.5, 9.8)                     # drop → verbs
-full_bar(9.8, 10.8, hats=False, claps=False, g=.55)    # particles gather: heartbeat only
-full_bar(11.05, 15.0)                  # burst → adjectives
-for x in (15.0, 15.125, 15.25, 15.375): add(snare(), x, .25 + (x - 15.0) * .8, rev=.2)   # fill into the O
-for x in (15.5, 16.5, 17.0, 17.5): kick_at(x, .6)      # hero: half-time
-full_bar(18.0, 20.5)                   # CTA
-kick_at(20.5, .9)
-for i in range(int((21.0 - 2.5) / .25)):
-    x = 2.5 + i * .25
-    if 9.8 <= x < 11.05 or 15.0 <= x < 15.5 or x >= 20.5: continue
-    if 15.5 <= x < 18.0 and i % 2: continue
+full_bar(G0, S_ASM)                                        # drop → verbs
+full_bar(S_ASM, S_BOOM - .5, hats=False, claps=False, g=.55)   # particles gather: heartbeat only
+full_bar(S_BOOM, S_ZOOM - .5)                              # burst → adjectives
+for k in range(8): add(snare(), S_ZOOM - .5 + k * .0625, .15 + k * .03, rev=.2)   # roll into the O
+for x in np.arange(S_HERO, S_CTA, 1.0): kick_at(x, .6)     # hero: half-time
+full_bar(S_CTA, S_OUT)                                     # CTA
+kick_at(S_OUT, .9)
+def silent(x): return (S_ASM <= x < S_BOOM) or (S_ZOOM - .5 <= x < S_HERO) or x >= S_OUT
+for i in range(int((S_OUT - G0) / .25)):
+    x = G0 + i * .25
+    if silent(x) or (S_HERO <= x < S_CTA and i % 2): continue
     if [1, 0, 1, 0, 1, 0, 1, 1][i % 8]: add(b808(root_at(x) + 12, .4, .16), x, .34, music=True)
 for (a, b, ch) in chords:
     seq = ARP[id(ch)]
     for i in range(int((b - a) / .25)):
         x = a + i * .25
-        if x < 4.5 or 9.8 <= x < 11.05 or 15.0 <= x < 15.5 or x >= 20.4: continue
-        g = .13 if x < 15.5 else .1 if x < 18 else .15
+        if x < snap(TL["cRev"]) or silent(x): continue
+        g = .13 if x < S_HERO else .1 if x < S_CTA else .15
         add(pluck(seq[(i * 2) % 8], .3, 3000), x, g * (1 if i % 2 == 0 else .75), pan=.4 * np.sin(i * .9), rev=.15, dly=.22, music=True)
 
 # ---------- the few sound effects (only on the big moments)
-add(boom(1.6, 90, 32, .7, .5), 2.5, .8, rev=.4); add(braam(52, 1.3, .6), 2.5, .4, rev=.4)      # DROP: call answered
-add(whoosh(.5, 250, 3500, .85, 1.2), 4.5, .45, rev=.3); add(sub_drop(1.2, 95, 34), 4.98, .6)   # pair pops
-add(whoosh(.55, 400, 4500, .8, 1.1), 6.5, .4, rev=.3, pan=np.linspace(.3, -.3, int(.55 * SR)))   # wipe into the verbs
-add(reverse_swell(.5), 9.3, .45)                                                              # into the particles
-add(line_riser(1.2), 9.85, .5, rev=.4)                                                        # gathering
-add(boom(2.0, 100, 30, .9, .8), 11.05, .85, rev=.5); add(stab([52, 59, 64], .5, 3000), 11.05, .45, rev=.3)   # burst + OTKUPUJEMO
-add(line_riser(.6), 14.55, .45); add(whoosh(.5, 300, 6500, .85, 1.3), 15.02, .75, rev=.4)     # fly through the O
-add(spot_thunk(), 15.5, .75, rev=.45); add(hum_on(.9), 15.52, .35, rev=.3)                    # spotlight
-add(whoosh(.7, 350, 2600, .6, 1.0), 16.45, .4, rev=.35, pan=np.linspace(-.5, .5, int(.7 * SR)))   # the turn
-add(whoosh(.45, 500, 4000, .85, 1.1), 17.5, .45, rev=.3)                                      # out of the hero
-add(boom(2.2, 95, 28, .9, .6), 18.0, .8, rev=.5)                                              # CTA
-add(stab([64, 71, 76], .45, 3800), 18.5, .45, rev=.4)                                         # POŠALJI DM
-add(whoosh(.7, 500, 6000, .75, 1.0), 18.6, .5, pan=np.linspace(-1, .6, int(.7 * SR)), rev=.3)  # paper plane
-for k, m in enumerate((76, 83, 88)): add(bell(m, 2.0, 1.1), 20.5 + k * .11, .3, rev=.7, dly=.2)   # sonic signature
+add(boom(1.6, 90, 32, .7, .5), G0, .8, rev=.4); add(braam(52, 1.3, .6), G0, .4, rev=.4)            # DROP: call answered
+add(whoosh(.5, 250, 3500, .85, 1.2), TL["cRev"] - .1, .45, rev=.3); add(sub_drop(1.2, 95, 34), TL["pair"] + .03, .6)   # pair pops
+add(whoosh(.55, 400, 4500, .8, 1.1), TL["dRev"] - .15, .4, rev=.3, pan=np.linspace(.3, -.3, int(.55 * SR)))   # wipe into the verbs
+add(reverse_swell(.5), TL["eRev"] - .45, .45)                                                       # into the particles
+add(line_riser(S_BOOM - S_ASM - .1), S_ASM + .05, .5, rev=.4)                                      # gathering
+add(boom(2.0, 100, 30, .9, .8), TL["boom"], .85, rev=.5); add(stab([52, 59, 64], .5, 3000), TL["boom"], .45, rev=.3)   # burst + OTKUPUJEMO
+add(line_riser(.6), TL["zoom"] - .55, .45); add(whoosh(.5, 300, 6500, .85, 1.3), TL["zoom"] - .03, .75, rev=.4)   # fly through the O
+add(spot_thunk(), TL["hero"], .75, rev=.45); add(hum_on(.9), TL["hero"] + .02, .35, rev=.3)           # spotlight
+add(whoosh(.7, 350, 2600, .6, 1.0), TL["flip"] - .05, .4, rev=.35, pan=np.linspace(-.5, .5, int(.7 * SR)))   # the turn
+add(whoosh(.45, 500, 4000, .85, 1.1), TL["shrink"] - .1, .45, rev=.3)                               # out of the hero
+add(boom(2.2, 95, 28, .9, .6), S_CTA, .8, rev=.5)                                                   # CTA
+add(stab([64, 71, 76], .45, 3800), TL["pill"], .45, rev=.4)                                         # POŠALJI DM
+add(whoosh(.7, 500, 6000, .75, 1.0), TL["plane"] - .02, .5, pan=np.linspace(-1, .6, int(.7 * SR)), rev=.3)   # paper plane
+for k, m in enumerate((76, 83, 88)): add(bell(m, 1.6, .8), S_OUT + k * .11, .28, rev=.6, dly=.15)   # sonic signature
+# loop seam: everything is inhaled into the dot, then the phone pops out again (t = 0 of the next pass)
+inhale = tvfilt(noise(int(.7 * SR)), lambda z: 4000 * .12 ** min(1, z / .7), 'bp', 1.2) * (T(.7) / .7) ** 2.2 * .45
+seam = np.minimum(1, (T(.7)[::-1]) / .06)                     # land softly on the seam (no click when it wraps)
+rs = reverse_swell(.45) * seam[-int(.45 * SR):]
+add(inhale * seam, -.7, .6, rev=.15); add(rs, -.45, .5)
+tail = np.sin(2 * np.pi * mtof(40) * T(.75)) * .25 * np.linspace(1, 0, int(.75 * SR)) ** 2   # the hook drone, fading into the seam
+add(tail, -.75, .55, music=True)
 
 # ------------------------------------------------------------------ mix
 duck = np.clip(duck, .35, 1); musL *= duck; musR *= duck
 dt = int(.375 * SR); dL = np.zeros(N); dR = np.zeros(N); src = lp(dlyS, 4500)
-for k in range(1, 6):
-    sh = dt * k
-    if sh >= N: break
-    (dL if k % 2 else dR)[sh:] += src[:N - sh] * .38 ** (k - 1) * .5
+for k in range(1, 6):                                   # circular echo (wraps across the loop seam)
+    (dL if k % 2 else dR)[:] += np.roll(src, dt * k) * .38 ** (k - 1) * .5
 musL += dL * duck; musR += dR * duck
 L = dryL + musL; R = dryR + musR
 ir_t = T(2.6)
 def ir():
     n = noise(len(ir_t)); x = lp(n, 6500) * np.exp(-ir_t / .45) + lp(n, 1600) * np.exp(-ir_t / .8) * .6
     x[:int(.015 * SR)] = 0; return x / np.sqrt(np.sum(x ** 2))
-def conv(x, h):
-    n = 1 << int(np.ceil(np.log2(len(x) + len(h)))); return np.fft.irfft(np.fft.rfft(x, n) * np.fft.rfft(h, n), n)[:len(x)]
+def conv(x, h):                                         # circular reverb: the tail of the end rings into the start
+    return np.fft.irfft(np.fft.rfft(x) * np.fft.rfft(h, len(x)), len(x))
 rs = hp(revS, 200); L += conv(rs, ir()) * .4; R += conv(rs, ir()) * .4
 L = hp(L, 28); R = hp(R, 28); L = L + hp(L, 2500) * .12; R = R + hp(R, 2500) * .12
 m = max(np.max(np.abs(L)), np.max(np.abs(R))); L /= m; R /= m
 drive = 2.0; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
-fade = np.ones(N); sel = tt > 20.4; fade[sel] = np.cos(np.clip((tt[sel] - 20.4) / .6, 0, 1) * np.pi / 2) ** 2
-fade[:96] = np.linspace(0, 1, 96); L *= fade; R *= fade
 pk = max(np.max(np.abs(L)), np.max(np.abs(R))); L *= .89 / pk; R *= .89 / pk
 out = np.stack([L, R], 1)
 pcm = np.clip(out * 32767 + rng.uniform(-.5, .5, out.shape) + rng.uniform(-.5, .5, out.shape), -32768, 32767).astype('<i2')
