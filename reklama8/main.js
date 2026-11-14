@@ -38,7 +38,7 @@ function drawReveals(t, base) {
     const draw = (p, col) => {
       if (p <= 0) return; bg.fillStyle = col; bg.beginPath();
       if (r.from === 'c') bg.arc(CX, CY, p * 1110, 0, Math.PI * 2);
-      else { const R = 5200, cy = r.from === 'b' ? H + R : -R; const d = p * (R + H + 40); bg.arc(CX, r.from === 'b' ? cy - d : cy + d, R, 0, Math.PI * 2); }
+      else { const R = 5200, cy = r.from === 'b' ? H + R : -R, sag = R - Math.sqrt(R * R - CX * CX); const d = p * (H + sag + 30); bg.arc(CX, r.from === 'b' ? cy - d : cy + d, R, 0, Math.PI * 2); }
       bg.fill();
     };
     const p = eInOutCubic(prog(t, r.t0, r.t0 + r.dur));
@@ -343,7 +343,7 @@ function soft(el, t, tOut) {
 }
 // ---- master schedule (seconds). Beat grid: 120 BPM starting at the drop (2.5)
 const T = {
-  drop: 2.5, b1: 2.5, b1o: 3.45, b2: 3.75, b2o: 4.5,
+  drop: 2.5, b1: 2.5, b1o: 3.38, b2: 3.88, b2o: 4.55,
   cRev: 4.72, pair: 4.95, pairOut: 6.5, dRev: 6.68,
   d1: 7.0, d1o: 7.62, d2Rev: 7.78, d2: 8.0, d2o: 8.62, d3Rev: 8.76, d3: 9.0, d3o: 9.62,
   eRev: 9.78, asm: 9.8, real: 10.62, realOut: 11.0, boom: 11.05, e1: 11.0, e1o: 11.82,
