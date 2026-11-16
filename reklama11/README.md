@@ -46,6 +46,14 @@ v1 je u istom projektu potpuno zamenjen. Nijedna pozadina, slika telefona, kompo
 - **Kraj:** štimovani metalni udari za svako slovo ZONA, staklo za TELEFONA, udarci za AKCIJA STIŽE i USKORO., pa zvono i dugi sub-rep.
 - **Muzika:** originalna, u d-molu na 120 BPM; rezovi su na udarima takta.
 
+## Verifikacija isporučenog fajla
+
+Rezultati `ffprobe` i analiza: **1080×1920** (SAR 1:1), **60/1 fps**, **1500 kadrova**, **25,000 s**, H.264 High, AAC 48 kHz stereo, **−14,0 LUFS**, true peak **−1,4 dBTP**.
+
+- **Crni i skoro crni kadrovi:** nema ih.
+- **Skokovi između kadrova:** svi veliki skokovi padaju na planirane prelaze i udarce.
+- **Tipografija:** QA (`tools/qa_text3d.mjs`) daje centriranje 0 px i sav tekst unutar safe zone (x 50–1030, y 220–1480).
+
 ## Ograničenja (iskreno)
 
 - AI video modeli (Seedance i slično) nisu povezani i nisu korišćeni.
