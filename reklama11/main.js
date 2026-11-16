@@ -273,7 +273,10 @@ const L = new Shot('lens', { bg: 0x010101 });
   const nrm = (() => { const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d'); const id = x.createImageData(512, 512);
     for (let y = 0; y < 512; y++) for (let i = 0; i < 512; i++) { const n = hash(i * 7.1 + y * 131.7) - .5, m = Math.sin(i * .05 + Math.sin(y * .03) * 2) * .5; const k = (y * 512 + i) * 4; id.data[k] = 128 + n * 26 + m * 6; id.data[k + 1] = 128 + (hash(i * 3.3 + y * 71.9) - .5) * 26; id.data[k + 2] = 255; id.data[k + 3] = 255; }
     x.putImageData(id, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(5, 7); return t; })();
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(16, 22), new THREE.MeshStandardMaterial({ color: 0x232325, metalness: 1, roughness: .36, envMapIntensity: .8, normalMap: nrm, normalScale: new THREE.Vector2(.35, .35) }));
+  const plShape = new THREE.Shape(); plShape.moveTo(-8, -11); plShape.lineTo(8, -11); plShape.lineTo(8, 11); plShape.lineTo(-8, 11); plShape.closePath();
+  plShape.holes.push(new THREE.Path().absarc(0, 0, 1.0, 0, Math.PI * 2, true));          // the lens opening (the optics sit below the plateau)
+  const plGeo = new THREE.ShapeGeometry(plShape, 96); { const uv = plGeo.attributes.uv, ps = plGeo.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, ps.getX(i) / 16 + .5, ps.getY(i) / 22 + .5); }
+  const plate = new THREE.Mesh(plGeo, new THREE.MeshStandardMaterial({ color: 0x232325, metalness: 1, roughness: .36, envMapIntensity: .8, normalMap: nrm, normalScale: new THREE.Vector2(.35, .35) }));
   s.add(plate);
   function polishM() { return new THREE.MeshStandardMaterial({ color: 0xffc8a0, metalness: 1, roughness: .1, envMapIntensity: 1.5 }); }
   const lathe = (pts, mat) => { const g = new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), 128); g.rotateX(Math.PI / 2); return new THREE.Mesh(g, mat); };
@@ -305,7 +308,7 @@ const L = new Shot('lens', { bg: 0x010101 });
   for (const [r, z] of [[.9, .02], [.82, -.12], [.74, -.2]]) { const tr = new THREE.Mesh(new THREE.TorusGeometry(r, .018, 12, 128), graphite(0x2a2a2c, .25)); tr.position.z = z; inner.add(tr); }
   const coat = (col, k) => new THREE.MeshStandardMaterial({ color: new THREE.Color(...col), metalness: 1, roughness: .12, envMapIntensity: k, ...ADD });
   const cap = (R, rr, z, mat) => { const th = Math.asin(rr / R); const g = new THREE.SphereGeometry(R, 96, 24, 0, Math.PI * 2, 0, th); g.rotateX(Math.PI / 2); g.translate(0, 0, z - R); return new THREE.Mesh(g, mat); };
-  inner.add(cap(2.4, .94, .1, coat([1, .62, .32], .32)), cap(1.6, .8, -.08, coat([1, .78, .45], .22)));
+  inner.add(cap(2.4, .94, .1, coat([1, .62, .32], .2)), cap(1.6, .8, -.08, coat([1, .78, .45], .14)));
   const iris = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.ShaderMaterial({ uniforms: { uR: { value: .5 }, uRot: { value: 0 }, uLA: { value: 2.2 }, uA: { value: 1 } }, vertexShader: VS,
     fragmentShader: `uniform float uR,uRot,uLA,uA; varying vec2 vUv; const float S=6.2831853/9.;
       void main(){ vec2 p=(vUv-.5)*2.2; float r=length(p); if(r>1.0) discard;
@@ -321,7 +324,8 @@ const L = new Shot('lens', { bg: 0x010101 });
   const pupil = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ color: 0x000000 })); pupil.position.z = -.7; inner.add(pupil);
   const deep = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff8a50, ...ADD, opacity: 0 })); deep.position.z = -.65; deep.scale.setScalar(.5); inner.add(deep); U.deep = deep;
   // cover glass: reflections + a moving orange light band
-  const cover = new THREE.Mesh(new THREE.CircleGeometry(1.03, 128), new THREE.MeshStandardMaterial({ color: 0xffd0a8, metalness: 1, roughness: .09, envMapIntensity: .13, ...ADD })); cover.position.z = .4; s.add(cover);
+  // cover glass: an unlit fresnel sheen (a lit metal layer here caught the key light and washed the whole lens out)
+  const cover = new THREE.Mesh(new THREE.CircleGeometry(1.03, 128), new THREE.ShaderMaterial({ ...ADD, vertexShader: VS, fragmentShader: `varying vec2 vUv; void main(){ float r=length(vUv-.5)*2.; gl_FragColor=vec4(vec3(1.,.62,.36)*pow(r,6.)*.08,1.); }` })); cover.position.z = .4; s.add(cover);
   const band = new THREE.Mesh(new THREE.CircleGeometry(1.03, 128), new THREE.ShaderMaterial({ ...ADD, uniforms: { uS: { value: -2 }, uA: { value: 0 } }, vertexShader: VS,
     fragmentShader: `uniform float uS,uA; varying vec2 vUv; void main(){ vec2 p=(vUv-.5)*2.; float r=length(p);
       float d=dot(p,normalize(vec2(.82,.57)))-uS; float b=exp(-d*d/.01)+.3*exp(-d*d/.12); float rim=smoothstep(.84,.97,r)*smoothstep(1.,.97,r);
@@ -533,6 +537,7 @@ const C = new Shot('corridor', { bg: 0x030202, env: ENV_STUDIO, fog: new THREE.F
   const scrG = new THREE.ShapeGeometry(sh, 24); scrG.scale(.94, .965, 1); const uvA = scrG.attributes.uv, posA = scrG.attributes.position;
   for (let i = 0; i < uvA.count; i++) uvA.setXY(i, posA.getX(i) / (w * .94) + .5, posA.getY(i) / (h * .965) + .5);
   const scrMesh = new THREE.Mesh(scrG, scrM); scrMesh.position.z = d / 2 + .015; ph.add(scrMesh);
+  const scrGlass = new THREE.Mesh(scrG, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: .05, envMapIntensity: .55, ...ADD })); scrGlass.position.z = d / 2 + .017; ph.add(scrGlass);   // cover glass: live reflections as it turns
   const pl = new THREE.Mesh(new RoundedBoxGeometry(.36, .4, .03, 4, .07), new THREE.MeshStandardMaterial({ color: 0x1a1918, metalness: .5, roughness: .22, envMapIntensity: 1.2 })); pl.position.set(-.17, .52, -d / 2 - .02); ph.add(pl);
   const ringM = new THREE.MeshStandardMaterial({ color: 0xc8b8a8, metalness: 1, roughness: .15, envMapIntensity: 1.6 }), lensM = new THREE.MeshStandardMaterial({ color: 0x020202, metalness: .2, roughness: .03, envMapIntensity: 1.4 });
   for (const [x, y] of [[-.25, .62], [-.25, .43], [-.09, .525]]) { const rg = new THREE.Mesh(new THREE.CylinderGeometry(.068, .072, .03, 48), ringM); rg.rotation.x = Math.PI / 2; rg.position.set(x, y, -d / 2 - .05); ph.add(rg);
