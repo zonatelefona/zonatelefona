@@ -1,5 +1,6 @@
-"""ZONA TELEFONA — BLACK FRIDAY IS COMING: original dark technology-trailer score and sound design, synthesized from scratch
-(no samples, no licensed music). Every cue is read from timeline.json. usage: python3 audio.py out.wav
+"""ZONA TELEFONA — BLACK FRIDAY (v2): completely new soundscape, synthesized from scratch (no samples, no licensed music).
+Mechanical lens sounds, sub-bass, metallic impacts, reverse whooshes, risers, controlled explosive hits, futuristic textures and
+drones. Every cue is read from timeline.json. usage: python3 audio.py out.wav
 """
 import sys, wave, json, os
 import numpy as np
@@ -306,7 +307,7 @@ def spot_thunk():
 
 
 
-# ================================================================== BLACK FRIDAY IS COMING — dark technology trailer score (original, synthesized)
+# ================================================================== v2 additions
 tt = np.arange(N) / SR
 def sine_sweep(length, f0, f1, curve=1.0):
     t = T(length); u = (t / length) ** curve; f = f0 * (f1 / f0) ** u
@@ -342,57 +343,153 @@ def pulse_bass(m, length=.24):
     t = T(length); f = mtof(m)
     s = (2 * ((f * t) % 1) - 1) * .7 + np.sin(2 * np.pi * f * .5 * t) * .6
     return lp(s, 900) * np.exp(-t / .09) * (1 - np.exp(-t / .002)) * .5
-# ---- music bus: drones, ostinato pulses, braams
-def clip01(x): return min(1, max(0, x))
+
+def ratchet(length=.3, rate=55, f=5200):
+    """focus-ring detents: a regular run of tiny metal clicks"""
+    out = np.zeros(int(length * SR)); k = 0; x = 0.
+    while x < length - .01:
+        i = int(x * SR); t = T(.01); c = (np.sin(2 * np.pi * f * (1 + .1 * hash_(k)) * t) * .5 + hp(noise(len(t)), 5000) * .5) * np.exp(-t / .0015)
+        out[i:i + len(c)] += c[:len(out) - i] * (.6 + .4 * hash_(k + 3)); k += 1; x += 1 / rate
+    return out * .3
+def iris_snap():
+    """aperture blades closing: fast click cluster + a dry metallic snap"""
+    a = latch_click() * .9; c = click_cascade(.07, 4000, 7000, 14) * 1.4; a[:len(c)] += c; return a
+def motor(length=.35, f0=700, f1=1300):
+    t = T(length); u = t / length; f = f0 + (f1 - f0) * u
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = (np.sin(ph) * .5 + np.sign(np.sin(ph * .5)) * .15) * (.6 + .4 * np.sin(2 * np.pi * 90 * t))
+    return lp(s, 3500) * np.sin(np.pi * u) ** .6 * .09
+def doppler(length=1.4, f0=180, peak=.55):
+    """object passing the lens: band-limited rush whose pitch falls as it passes"""
+    t = T(length); u = t / length
+    fc = lambda z: f0 * 9 if z / length < peak else f0 * 9 * (1 - .82 * min(1, (z / length - peak) / (1 - peak)) ** .5)
+    s = tvfilt(noise(len(t)), fc, 'bp', 1.2)
+    e = np.where(u < peak, (u / peak) ** 3, np.exp(-(u - peak) / (1 - peak) * 3.5))
+    tone = np.sin(2 * np.pi * np.cumsum(np.where(u < peak, 520, 520 * (1 - .45 * np.minimum(1, (u - peak) / .2)))) / SR) * e * .12
+    return s * e * .9 + tone
+def granular_metal(length, d0=6, d1=90, lo=1500, hi=7000, seed=5):
+    """swarm of tiny metal pieces: dense micro-resonances, density rising"""
+    r = np.random.default_rng(seed); n = int(length * SR); outL = np.zeros(n); outR = np.zeros(n); x = 0.
+    while x < length:
+        u = x / length; x += -np.log(max(1e-4, r.uniform())) / (d0 + (d1 - d0) * u ** 1.5)
+        i = int(x * SR); L_ = int(r.uniform(.015, .08) * SR)
+        if i + L_ >= n: break
+        tl_ = np.arange(L_) / SR; f = r.uniform(lo, hi)
+        g = np.sin(2 * np.pi * f * tl_) * np.exp(-tl_ / r.uniform(.004, .025)) * r.uniform(.2, 1)
+        g += np.sin(2 * np.pi * f * 2.76 * tl_) * np.exp(-tl_ / .006) * .3
+        p = r.uniform(-1, 1); outL[i:i + L_] += g * np.cos((p + 1) * np.pi / 4); outR[i:i + L_] += g * np.sin((p + 1) * np.pi / 4)
+    return outL * .1, outR * .1
+def pad(notes, length, att=1.2, rel=1.2, bright=1400):
+    t = T(length); out = np.zeros_like(t)
+    for m in notes: out += supersaw(m, length, 5, .09) * .5 + np.sin(2 * np.pi * mtof(m) * t) * .3
+    env = np.minimum(1, t / att) * np.minimum(1, np.maximum(0, length - t) / rel)
+    return lp(out, bright) * env * .12
+def heartbeat():
+    return sub_drop(.5, 80, 38) * .8 + np.concatenate([np.zeros(int(.16 * SR)), sub_drop(.4, 70, 36) * .5])[:int(.5 * SR)]
+def addst(lr, t0, gain=1., rev=0.):
+    l, r_ = lr; place(dryL, l, t0, gain); place(dryR, r_, t0, gain)
+    if rev: place(revS, (l + r_) * .5, t0, gain * rev)
+
+tt = np.arange(N) / SR
+B = 60 / T_['bpm']
+
+# ================================================================== MUSIC BUS (D minor, 120 BPM)
+# drones: low D with a fifth, filtered; they open with the story and close for the end card
 dr = np.zeros(N)
-for (a, b, m) in ((.25, 3.2, 26), (3.0, 10.3, 26), (13.2, 19.2, 26), (19.0, 25.0, 26)):
-    t = T(b - a); env = np.minimum(1, t / 1.2) * np.minimum(1, (b - a - t) / .8)
-    s = (supersaw(m + 12, b - a, 5, .06) * .35 + np.sin(2 * np.pi * mtof(m) * t) * .5 + supersaw(m + 19, b - a, 3, .05) * .18) * env
+for (a, b, m, g) in ((0.0, 3.1, 26, .8), (3.0, 11.0, 26, 1.), (11.0, 13.05, 27, .9), (13.0, 19.1, 26, 1.), (19.0, 25.0, 26, 1.)):
+    t = T(b - a); env = np.minimum(1, t / .35) * np.minimum(1, (b - a - t) / .3)
+    s = (supersaw(m + 12, b - a, 5, .05) * .32 + np.sin(2 * np.pi * mtof(m) * t) * .55 + supersaw(m + 19, b - a, 3, .04) * .14) * env * g
     place(dr, s, a)
-dr = tvfilt(dr, lambda x: 200 + 900 * clip01((x - .25) / 3) if x < 3.2 else (1100 if x < 10 else (500 if x < 13.2 else 1300)), 'lp')
-musL += dr * .45; musR += dr * .45; revS += dr * .12
-# pulses (ostinato 8ths at 120 BPM) — build in S2/S3, vanish in the slow-down, return heavier in S5/S6
-for x in np.arange(3.0, 10.0, .25):
-    g = .14 + .12 * (x - 3) / 7
-    add(pulse_bass(38 if int(x * 2) % 8 < 6 else 41), x, g, music=True)
-for x in np.arange(14.0, 23.0, .25): add(pulse_bass(38 if int(x * 2) % 8 < 6 else 36), x, .26, music=True)
+def drone_cut(x):
+    if x < 3.0: return 260 + 500 * clip01(x / 3)
+    if x < 7.0: return 700
+    if x < 11.0: return 700 + 1600 * clip01((x - 7) / 3.7) ** 2
+    if x < 13.0: return 380 + 900 * clip01((x - 11) / 2) ** 2
+    if x < 15.0: return 1500
+    if x < 19.0: return 900
+    if x < 23.0: return 1400
+    return 900 - 600 * clip01((x - 23) / 2)
+def clip01(x): return min(1, max(0, x))
+dr = tvfilt(dr, drone_cut, 'lp')
+musL += dr * .42; musR += dr * .42; revS += dr * .1
+# ostinato pulse (8ths): product shots, corridor (16ths when the tension builds), hero
+seqA = [38, 38, 41, 38, 38, 43, 41, 36]
+for k, x in enumerate(np.arange(T_['s2a'], T_['s3out'], B / 2)):
+    g = .13 + .1 * clip01((x - 3) / 7); add(pulse_bass(seqA[k % 8]), x, g, pan=(.25 if k % 2 else -.25), music=True)
+for x in np.arange(T_['build'], T_['s3out'], B / 4): add(pulse_bass(50, .12), x + B / 8, .05 + .1 * clip01((x - T_['build']) / 1.2), pan=.5 * np.sin(x * 9), music=True)
+for k, x in enumerate(np.arange(T_['s6'], T_['s6out'], B / 2)): add(pulse_bass(seqA[k % 8] - 2 if k % 16 >= 8 else seqA[k % 8]), x, .24, pan=(.3 if k % 2 else -.3), music=True)
 K = kick(1.0, .7, 40)
-for x in np.arange(6.0, 10.0, 1.0): add(K, x, .5, music=True); place(duck, -.35 * np.exp(-T(.4) / .12), x)
-for x in np.arange(14.0, 23.0, 1.0): add(K, x, .62, music=True); place(duck, -.4 * np.exp(-T(.4) / .12), x)
-# ---- sound design (dry)
-add(lp(noise(int(3.4 * SR)), 120) * np.minimum(1, T(3.4) / 1.8) * .5, T_['rumble'], .9)               # sub rumble emerging
-add(sine_sweep(3.0, 28, 42) * np.minimum(1, T(3.0) / 1.5) * .35, T_['rumble'], .8)
-add(np.sin(2 * np.pi * 2650 * T(1.6)) * np.exp(-T(1.6) / .5) * .05 + np.sin(2 * np.pi * 3975 * T(1.6)) * np.exp(-T(1.6) / .3) * .025, T_['light'], .9, rev=.7)   # the tiny light
-add(reverse_swell(.9), T_['beams'], .4, rev=.5)
-add(reverse_swell(.6), T_['impactZ'] - .6, .7); add(boom(3.2, 70, 26, 1.3, .9), T_['impactZ'], 1.0, rev=.6); add(metal_hit(55, 4.5, 2.2), T_['impactZ'], .9, rev=.5); add(sub_drop(2.0, 60, 24), T_['impactZ'], .7)
-for i in range(4): add(metal_hit(90 + i * 14, 1.6, .5, .6), T_['zona'] + (i * .14 if i else -1.25), .35, rev=.4)
-add(shimmer(2.4), T_['tel'], .4, rev=.7)
-add(hum_on(1.6), T_['edge'], .25, rev=.4); add(line_riser(1.2), T_['edge'], .2)
-add(whoosh(1.0, 120, 3200, .7, 1.4), T_['pass'] - .05, .85, pan=np.linspace(-.7, .8, int(1.0 * SR)), rev=.3)   # rush past the monolith edge
-for d in (.1, .35, .55): add(whoosh(1.2, 90, 1400, .8, 1.3), T_['rise'] + d, .3, rev=.4)          # phones rising from the dark
-add(metal_slide(1.2), T_['hero'] + .3, .25, rev=.5); add(shimmer(2.0), T_['hero'] + .4, .3, rev=.7)
-for x in (6.9, 7.8, 8.7, 9.4): add(whoosh(.5, 600, 6000, .5, 1.0), x, .18, pan=np.linspace(-.8, .8, int(.5 * SR)), rev=.2)   # light streaks
-# slow-down: music falls away, riser + heartbeat, crackling energy in the cracks
-add(sine_sweep(2.7, 80, 640, 1.6) * np.linspace(0, 1, int(2.7 * SR)) ** 2 * .25, T_['s4'] - .05, .8, rev=.4)
-add(tvfilt(noise(int(2.7 * SR)), lambda z: 300 * 20 ** min(1, z / 2.7), 'bp', 1.2) * np.linspace(0, 1, int(2.7 * SR)) ** 2.5 * .45, T_['s4'] - .05, .7, rev=.3)
-for i, x in enumerate((10.2, 10.95, 11.6, 12.1, 12.45)): add(sub_drop(.9, 75, 34), x, .45 + i * .06)
-add(crackle(T_['fracture'] - T_['cracks'], 6, 160), T_['cracks'], .9, pan=0, rev=.35)
-add(reverse_swell(.5), T_['fracture'] - .5, .8)
-# fracture
-add(shatter(2.4), T_['fracture'], .95, rev=.5); add(boom(2.2, 95, 30, .7, 1.0), T_['fracture'], .8, rev=.4); add(crackle(1.2, 200, 20), T_['fracture'] + .02, .6)
-# BLACK FRIDAY — the strongest hit of the film
-add(reverse_swell(.35), T_['bf'] - .35, .8)
-add(boom(4.0, 80, 22, 1.8, 1.0), T_['bf'], 1.15, rev=.7); add(braam(38, 3.2, 1.6), T_['bf'], .8, rev=.6); add(braam(45, 3.2, 1.6), T_['bf'], .45, rev=.6)
-add(metal_hit(41, 5.0, 2.8, 1.2), T_['bf'], .9, rev=.6); add(sub_drop(3.0, 55, 20), T_['bf'], .9)
-add(boom(1.6, 90, 34, .6, .6), T_['akcija'], .55, rev=.4); add(metal_hit(98, 2.0, .9, .7), T_['akcija'], .35, rev=.5)
-add(boom(1.8, 85, 30, .7, .6), T_['zt'], .65, rev=.45); add(metal_hit(73, 2.6, 1.2, .8), T_['zt'], .45, rev=.5)
-add(whoosh(.9, 150, 2400, .75, 1.3), T_['s5out'], .5, rev=.3)
-add(whoosh(1.4, 80, 1600, .8, 1.3), T_['phone'], .45, rev=.4); add(shimmer(2.0), T_['phone'] + .8, .3, rev=.7)
-add(metal_hit(120, 1.4, .5, .5), T_['question'], .3, rev=.5)
-add(metal_hit(82, 2.4, 1.1, .8), T_['logo'], .45, rev=.6); add(shimmer(2.0), T_['logo'], .3, rev=.7)
-add(sine_sweep(1.1, 60, 420, 1.8) * np.linspace(0, 1, int(1.1 * SR)) ** 2 * .3, T_['uskoro'] - 1.1, .7); add(reverse_swell(.5), T_['uskoro'] - .5, .7)
-add(boom(4.5, 75, 22, 2.0, .9), T_['uskoro'], 1.05, rev=.7); add(braam(38, 3.5, 2.0), T_['uskoro'], .55, rev=.6); add(sub_drop(3.4, 50, 22), T_['uskoro'], .85)
-add(np.sin(2 * np.pi * 36.7 * T(2.6)) * np.exp(-T(2.6) / 1.0) * np.minimum(1, T(2.6) / .05) * .4, T_['s7'] + .2, .8)   # final bass resonance
+for x in list(np.arange(T_['s2a'] + 1, T_['s3'], 1.0)) + list(np.arange(T_['s3'], T_['s3out'], B)):
+    add(K, x, .42 + .18 * clip01((x - 7) / 3.6), music=True); place(duck, -.3 * np.exp(-T(.35) / .1), x)
+for x in np.arange(T_['s7'] - 4 + 0.0, T_['s6out'], B):
+    add(K, x, .62, music=True); place(duck, -.38 * np.exp(-T(.35) / .1), x)
+for x in np.arange(T_['s3'], T_['s3out'], B / 2): add(hat(.03), x + B / 4, .32 + .3 * clip01((x - 9) / 1.6), pan=.35, music=True)
+for x in np.arange(T_['s6'], T_['s6out'], B / 2): add(hat(.03), x + B / 4, .4, pan=-.3, music=True)
+for x in (8.0, 9.0, 10.0, 20.0, 21.0, 22.0): add(clap(), x, .3, rev=.35, music=True)
+for k, x in enumerate(np.arange(9.5, 10.7, 1 / 16 * 4)): add(snare(), x, .1 + .35 * (k / 19) ** 2, rev=.2, music=True)
+# S5 premium brand pad (Dm9) and a slow half-time pulse
+add(pad([50, 53, 57, 60, 64], 4.2, 1.0, 1.2, 1600), T_['s5'] - .1, .9, rev=.5, music=True)
+for x in np.arange(16.0, 18.6, 1.0): add(pulse_bass(38, .5), x, .26, music=True); add(K, x, .4, music=True)
+add(pad([50, 57, 62, 65, 69], 3.0, .6, 1.6, 1300), T_['s7'] - .2, .7, rev=.6, music=True)
+
+# ================================================================== SOUND DESIGN (dry bus)
+# S1 — immediate hit on the very first frame: mechanical clack + metal impact + sub
+add(boom(1.6, 95, 34, .5, 1.0), 0.0, .72, rev=.35); add(metal_hit(147, 2.2, .9, 1.0), 0.0, .55, rev=.45); add(latch_click(), 0.0, 1.0); add(sub_drop(1.4, 90, 32), 0.0, .7)
+add(motor(.34, 650, 1250), .02, .9, pan=-.2)                                   # focus motor during the push
+add(ratchet(.22, 70), .05, .7, pan=.15)
+add(iris_snap(), T_['irisClose'], 1.0, rev=.15)                                 # blades snap closed
+add(motor(.34, 900, 1500), T_['irisOpen'], 1.0, pan=.2); add(ratchet(.3, 45, 4600), T_['irisOpen'] + .02, .8, pan=-.15)   # servo opens the iris
+add(glass_sweep(.9, 2400, 4800), .05, .5, pan=np.linspace(-.6, .6, int(.9 * SR)), rev=.6)   # orange light across the glass
+add(reverse_swell(.5), T_['through'] - .1, .55)                                   # suction into the aperture
+add(whoosh(.75, 90, 2600, .8, 1.3), T_['through'] - .2, .9, rev=.3)
+add(sine_sweep(.7, 40, 120, 1.5) * np.linspace(0, 1, int(.7 * SR)) ** 2 * .35, T_['through'], .8)
+add(reverse_swell(.3), T_['spremi'] - .3, .8)
+add(boom(3.0, 85, 26, 1.1, 1.0), T_['spremi'], .82, rev=.55); add(sub_drop(2.4, 62, 24), T_['spremi'], .85); add(metal_hit(62, 3.4, 1.8, .9), T_['spremi'], .6, rev=.5)
+add(braam(38, 2.0, 1.1), T_['spremi'], .35, rev=.5)
+add(hum_on(1.2) * .6 + np.sin(2 * np.pi * 220 * T(1.2)) * np.exp(-T(1.2) / .6) * .03, T_['spremi'] + .2, .4, rev=.4)   # light blade humming
+add(line_riser(.36), T_['s1out'] - .08, .55); add(zap(5200, 300, .3), T_['s2a'] - .04, .3, rev=.3)
+# S2 — four product shots, one transition sound each
+add(metal_hit(196, 1.6, .7, .8), T_['s2a'], .45, rev=.4); add(metal_slide(.9), T_['s2a'] + .15, .5, pan=np.linspace(-.3, .3, int(.9 * SR)), rev=.4)
+add(whoosh(.32, 400, 7000, .6, 1.0), T_['s2b'] - .2, .75, pan=np.linspace(.9, -.9, int(.32 * SR)))   # whip
+add(shutter(), T_['s2b'] + .02, .7); add(ratchet(.35, 40, 3800), T_['s2b'] + .06, .6, pan=.3)        # rack focus
+add(glass_sweep(.45, 900, 3200), T_['s2c'] - .22, .5, rev=.4); add(hum_on(.9), T_['s2c'], .3, rev=.4)   # display wakes
+add(metal_slide(.5), T_['s2d'] - .16, .45, pan=np.linspace(-.7, .7, int(.5 * SR)), rev=.3); add(shimmer(1.6), T_['s2d'], .22, rev=.6)
+add(whoosh(.6, 70, 1400, .85, 1.3), T_['s3'] - .45, .75, rev=.25); add(metal_hit(98, 2.2, 1.1, .8), T_['s3'], .5, rev=.45)
+# S3 — corridor: light gates, the phone near-miss, tension
+for x in (7.55, 7.95, 9.35, 9.8, 10.15, 10.42): add(whoosh(.35, 500, 5000, .6, 1.0), x, .22, pan=np.linspace(-.6, .6, int(.35 * SR)), rev=.15)
+add(doppler(1.5, 170, .58), T_['flyby'] - .75, 1.0, pan=np.linspace(-.3, .9, int(1.5 * SR)), rev=.25)
+add(metal_slide(.5), T_['flyby'] - .1, .5, pan=.6, rev=.3); add(tick_hi(5200), T_['flyby'] - .18, .5, pan=.6, rev=.4)
+add(line_riser(1.25), T_['build'], .6, rev=.2); add(sine_sweep(1.3, 70, 520, 1.7) * np.linspace(0, 1, int(1.3 * SR)) ** 2 * .3, T_['build'], .7, rev=.3)
+add(crackle(1.0, 10, 150), 9.7, .45, rev=.2)
+add(reverse_swell(.45), T_['s3out'] - .1, .8)
+# S4 — flash, then the metal storm; heartbeats; the lock (strongest hit of the film)
+add(boom(1.8, 110, 40, .55, 1.0), T_['s4'] - .1, .7, rev=.5); add(shatter(1.2), T_['s4'] - .1, .35, rev=.4)
+addst(granular_metal(2.0, 10, 160, 1600, 7500, 11), T_['s4'], .9, rev=.35)
+add(tvfilt(noise(int(2.0 * SR)), lambda z: 200 + 800 * (.5 + .5 * np.sin(2 * np.pi * 1.6 * z)) * (z / 2.0 + .3), 'bp', 1.4) * np.linspace(.3, 1, int(2.0 * SR)) * .35, T_['s4'], .7,
+    pan=.7 * np.sin(2 * np.pi * 1.1 * T(2.0)), rev=.3)                          # vortex wind circling
+for i, x in enumerate((11.5, 12.0, 12.5)): add(heartbeat(), x, .6 + .15 * i)
+add(sine_sweep(1.6, 55, 440, 1.8) * np.linspace(0, 1, int(1.6 * SR)) ** 2.2 * .3, T_['lock'] - 1.6, .8, rev=.4)
+add(reverse_swell(.4), T_['lock'] - .4, .9); add(rev_crash(.6), T_['lock'] - .6, .6)
+add(boom(4.2, 82, 21, 1.8, 1.0), T_['lock'], 1.2, rev=.7); add(braam(38, 3.2, 1.6), T_['lock'], .75, rev=.6); add(braam(45, 3.2, 1.5), T_['lock'], .4, rev=.6)
+add(metal_hit(41, 5.0, 2.8, 1.2), T_['lock'], .95, rev=.6); add(sub_drop(3.2, 52, 19), T_['lock'], 1.0); add(crackle(1.4, 220, 10), T_['lock'] + .02, .55, rev=.3)
+add(metal_settle(), T_['lock'] + .55, .4, rev=.5)
+add(whoosh(.5, 120, 3800, .85, 1.2), T_['s4out'] - .05, .8, rev=.3)            # slit opens
+# S5 — premium brand reveal: one tuned metal strike per rising letter of ZONA, glass for TELEFONA
+for i, m in enumerate((62, 65, 69, 74)):
+    add(metal_hit(mtof(m) / 2, 2.4, 1.2, .3), T_['logoRise'] + .35 + i * .11, .26, pan=(i - 1.5) * .3, rev=.6)
+add(glass_chime([86, 89, 93, 98], 2.6), T_['logoRise'] + .9, .7, rev=.7); add(shimmer(2.0), T_['logoRise'] + .95, .25, rev=.7)
+add(felt_thump(), T_['logoRise'] + .35, .6)
+add(reverse_swell(.6), T_['s5out'] - .2, .55); add(whoosh(.7, 100, 2000, .8, 1.3), T_['s5out'] - .1, .55, rev=.35)
+# S6 — hero: AKCIJA STIŽE, riser, USKORO. (final impact)
+add(boom(1.8, 92, 34, .7, .8), T_['akcija'], .7, rev=.45); add(metal_hit(110, 2.4, 1.1, .8), T_['akcija'], .45, rev=.5); add(braam(43, 1.6, .9), T_['akcija'], .25, rev=.5)
+add(line_riser(1.0), T_['uskoro'] - 1.0, .5, rev=.2); add(sine_sweep(1.0, 60, 380, 1.8) * np.linspace(0, 1, int(1.0 * SR)) ** 2 * .3, T_['uskoro'] - 1.0, .7)
+add(reverse_swell(.4), T_['uskoro'] - .4, .75)
+add(boom(4.0, 78, 22, 1.7, .9), T_['uskoro'], .88, rev=.65); add(braam(38, 3.0, 1.7), T_['uskoro'], .42, rev=.6); add(sub_drop(3.0, 50, 21), T_['uskoro'], .75)
+add(metal_hit(55, 4.0, 2.2, .8), T_['uskoro'], .55, rev=.6)
+# S7 — end card: one clean bell and a long, soft sub tail (no abrupt cut)
+add(whoosh(.8, 80, 900, .85, 1.3), T_['s6out'] - .2, .35, rev=.4)
+add(bell(74, 3.0, 1.3), T_['s7'] + .35, .5, rev=.8); add(bell(81, 2.6, 1.0), T_['s7'] + .38, .22, rev=.8)
+add(np.sin(2 * np.pi * 36.7 * T(2.0)) * np.exp(-T(2.0) / .9) * np.minimum(1, T(2.0) / .05) * .38, T_['s7'] + .3, .8)
 
 # ------------------------------------------------------------------ mix
 duck = np.clip(duck, .5, 1); musL *= duck; musR *= duck
@@ -403,13 +500,13 @@ def ir():
     x[:int(.02 * SR)] = 0; return x / np.sqrt(np.sum(x ** 2))
 def conv(x, h):
     n = 1 << int(np.ceil(np.log2(len(x) + len(h)))); return np.fft.irfft(np.fft.rfft(x, n) * np.fft.rfft(h, n), n)[:len(x)]
-rs = hp(revS, 180); L += conv(rs, ir()) * .45; R += conv(rs, ir()) * .45
-L = hp(L, 22); R = hp(R, 22)
+rs = hp(revS, 180); L += conv(rs, ir()) * .42; R += conv(rs, ir()) * .42
+L = hp(L, 24); R = hp(R, 24)
 m = max(np.max(np.abs(L)), np.max(np.abs(R))); L /= m; R /= m
-drive = 1.5; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
-sil = int(T_['rumble'] * SR); L[:sil] = 0; R[:sil] = 0                                   # absolute silence at the very start
-fade = np.ones(N); sel = tt > DUR - .9; fade[sel] = np.cos(np.clip((tt[sel] - (DUR - .9)) / .9, 0, 1) * np.pi / 2) ** 2
-L *= fade; R *= fade
+drive = 1.35; L = np.tanh(L * drive) / np.tanh(drive); R = np.tanh(R * drive) / np.tanh(drive)
+fin = np.ones(N); sel = tt < .004; fin[sel] = tt[sel] / .004                         # 4 ms de-click on the first sample, nothing more
+fade = np.ones(N); sel = tt > DUR - 1.4; fade[sel] = np.cos(np.clip((tt[sel] - (DUR - 1.4)) / 1.4, 0, 1) * np.pi / 2) ** 2
+L *= fin * fade; R *= fin * fade
 pk = max(np.max(np.abs(L)), np.max(np.abs(R))); L *= .89 / pk; R *= .89 / pk
 out = np.stack([L, R], 1)
 pcm = np.clip(out * 32767 + rng.uniform(-.5, .5, out.shape) + rng.uniform(-.5, .5, out.shape), -32768, 32767).astype('<i2')
