@@ -85,7 +85,7 @@ const COMP = new THREE.ShaderMaterial({
         c=mix(zb(tA,.5+(vUv-.5)/(1.+2.2*ea),vec2(.5),.2*uP),zb(tB,.5+(vUv-.5)*(1.6-.6*eb),vec2(.5),.22*(1.-uP)),smoothstep(.3,.7,uP));
       } else if(uMode==7){          // FLASH into the light
         float up=smoothstep(0.,.5,uP), dn=1.-smoothstep(.5,1.,uP);
-        c=mix(s(tA,vUv)*(1.+7.*up*up),s(tB,vUv)*(1.+7.*dn*dn),smoothstep(.44,.56,uP))+vec3(1.,.7,.48)*exp(-pow((uP-.5)/.11,2.))*2.2;
+        c=mix(s(tA,vUv)*(1.+2.6*up*up),s(tB,vUv)*(1.+2.6*dn*dn),smoothstep(.44,.56,uP))+vec3(1.,.55,.28)*exp(-pow((uP-.5)/.1,2.))*.75;
       } else if(uMode==8){          // SLIT between the two lines
         float dy=abs(vUv.y-uC.y); float m=smoothstep(uR+.003,uR-.003,dy);
         c=mix(zb(tA,vUv,uC,.1*uP),s(tB,uC+(vUv-uC)*(1.25-.25*uP))*(1.+1.5*(1.-uP)),m)+vec3(1.,.6,.3)*exp(-pow((dy-uR)/.005,2.))*1.4*(1.-uP);
@@ -507,14 +507,15 @@ const C = new Shot('corridor', { bg: 0x030202, env: ENV_STUDIO, fog: new THREE.F
   const wallR = wallL.clone(); wallR.rotation.y = -Math.PI / 2; wallR.position.x = 3.5; s.add(wallR);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(7, 170), new THREE.MeshStandardMaterial({ color: 0x080808, metalness: .85, roughness: .26, envMapIntensity: .7 })); floor.rotation.x = -Math.PI / 2; floor.position.set(0, -1.4, -70); s.add(floor);
   const stripMat = new THREE.ShaderMaterial({ ...ADD, fog: false, uniforms: { uT: { value: 0 }, uA: { value: 1 }, uK: { value: 0 } }, vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-    fragmentShader: `uniform float uT,uA,uK; varying vec3 vW; void main(){ float z=vW.z; float ph=fract((z*.06+uT)); float p=exp(-pow((ph-.5)/.02,2.))*(1.+uK*2.);
+    fragmentShader: `uniform float uT,uA,uK; varying vec3 vW; void main(){ float z=vW.z; float ph=fract((z*.11+uT)); float p=exp(-pow((ph-.5)/.025,2.))*(1.4+uK*2.);
       float base=.22+.25*uK; float fog=exp(-abs(z-cameraPosition.z)*.025); gl_FragColor=vec4(vec3(1.,.45,.16)*(base+p*3.)*fog*uA,1.); }` });
   for (const x of [-1.5, 1.5]) { const st = new THREE.Mesh(new THREE.PlaneGeometry(.05, 170), stripMat); st.rotation.x = -Math.PI / 2; st.position.set(x, -1.395, -70); s.add(st); }
+  for (const [x, y] of [[-3.0, 3.4], [3.0, 3.4], [-3.0, -.9], [3.0, -.9]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 170), stripMat); r.position.set(x, y, -70); s.add(r); }   // wall light rails
   U.strip = stripMat;
   U.gates = [];
-  for (let i = 0; i < 8; i++) { const g = new THREE.Group(), gm = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) });
+  for (let i = 0; i < 16; i++) { const g = new THREE.Group(), gm = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) });
     for (const [w, h, x, y] of [[5.2, .04, 0, 4.6], [.04, 6, -2.6, 1.6], [.04, 6, 2.6, 1.6]]) { const b = new THREE.Mesh(new THREE.PlaneGeometry(w, h), gm); b.position.set(x, y, 0); g.add(b); }
-    g.position.z = -6 - i * 15; g.userData.m = gm; s.add(g); U.gates.push(g); }
+    g.position.z = -4 - i * 7.5; g.userData.m = gm; s.add(g); U.gates.push(g); }
   const endW = glowPlane(40, 40, [1, .5, .2], 12); endW.position.set(0, 1.5, -150); s.add(endW); U.endW = endW;
   U.dust = dustCloud(2600, 0, 1.2, -60, 6, 7, 140, 2.2, 41); s.add(U.dust);
   // speed lines (sparks) flowing past
@@ -558,7 +559,7 @@ const C = new Shot('corridor', { bg: 0x030202, env: ENV_STUDIO, fog: new THREE.F
     U.l2.position.set(0, 3.6, z - 12); U.l2.intensity = 30 + 40 * prog(t, 9.4, 10.7);
     const tension = eInCubic(prog(t, T.build, T.s3out + .3));
     U.strip.uniforms.uT.value = -(t - 7) * (1.2 + 3 * tension) - tension * 2; U.strip.uniforms.uK.value = tension;
-    U.gates.forEach((g, i) => { const dz = g.position.z - z, k = Math.exp(-Math.pow((dz + 7) / 6, 2)) * .4 + Math.exp(-Math.pow(dz / 2.5, 2)) * 1.2 + tension * .6; g.userData.m.color.setRGB(3.2 * k, 1.1 * k, .34 * k); });
+    U.gates.forEach((g, i) => { const dz = g.position.z - z, k = .2 + Math.exp(-Math.pow((dz + 7) / 6, 2)) * .45 + Math.exp(-Math.pow(dz / 2.5, 2)) * 1.1 + tension * .55; g.userData.m.color.setRGB(3.2 * k, 1.1 * k, .34 * k); });
     U.endW.material.uniforms.uA.value = .18 + 1.6 * tension; U.dust.material.uniforms.uA.value = .9; U.dust.material.uniforms.uT.value = t;
     // the phone floats in the corridor, screen towards us; the camera skims past its titanium edge
     const pz = zAt(T.flyby + .05), turn = eInOutSine(prog(t, 7.1, 8.6));
@@ -617,8 +618,8 @@ const F = new Shot('assemble', { bg: 0x020101, env: ENV_HOT, fog: new THREE.FogE
       const u = hash(i * 3.7 + .1); let lo = 0, hi = tris.length - 1; while (lo < hi) { const mid = (lo + hi) >> 1; if (tris[mid].cum < u) lo = mid + 1; else hi = mid; }
       const tr = tris[lo]; let r1 = hash(i * 5.3 + .2), r2 = hash(i * 7.1 + .3); if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
       const tgt = tr.a.clone().addScaledVector(new THREE.Vector3().subVectors(tr.b, tr.a), r1).addScaledVector(new THREE.Vector3().subVectors(tr.c, tr.a), r2);
-      const th = hash(i * 1.3) * Math.PI * 2, rad = 4 + hash(i * 2.9) * 9;
-      const start = new THREE.Vector3(Math.cos(th) * rad, Math.sin(th) * rad * .9, -8 + hash(i * 4.4) * 15);
+      const th = hash(i * 1.3) * Math.PI * 2, rad = 2.2 + hash(i * 2.9) * 6.5;
+      const start = new THREE.Vector3(Math.cos(th) * rad, Math.sin(th) * rad * 1.1, -6 + hash(i * 4.4) * 13);
       U.fr8.push({ tgt, start, ts: 10.75 + hash(i * 6.1) * .5, ta: 12.2 + Math.pow(hash(i * 8.3), .7) * .72, sw: (2.2 + hash(i * 9.7) * 2.5) * (hash(i * 3.3) > .5 ? 1 : -1),
         ax: new THREE.Vector3(hash(i + .5) - .5, hash(i + .7) - .5, hash(i + .9) - .5).normalize(), spin: 5 + hash(i * 11.1) * 9, sc: side * (.75 + hash(i * 12.7) * .6), rz: hash(i * 13.3) * 6.28 });
       const g = hash(i * 14.9); col.setRGB(...(g < .2 ? [.9, .45, .2] : g < .5 ? [.42, .42, .44] : [.2, .2, .21])); inst.setColorAt(i, col);
@@ -641,7 +642,7 @@ const F = new Shot('assemble', { bg: 0x020101, env: ENV_HOT, fog: new THREE.FogE
       rel.applyAxisAngle(Zax, f.sw * Math.pow(1 - e, 2));
       P.copy(f.tgt).add(rel); if (e < 1) P.z += Math.sin(e * Math.PI) * .6;
       Q.setFromAxisAngle(f.ax, f.spin * (1 - e) * (1 - e) + f.rz * (1 - e)); Q0.setFromAxisAngle(Zax, f.rz * .2); Q.slerp(Q0, eInCubic(e));
-      const sc = f.sc * (1 - fragOut) * (1 + 1.6 * (1 - e) * (1 - e)); S.set(sc, sc, sc * .5);
+      const sc = f.sc * (1 - fragOut) * (1 + 4 * (1 - e) * (1 - e)); S.set(sc, sc, sc * .5);
       M.compose(P, Q, S); U.inst.setMatrixAt(i, M);
     });
     U.inst.instanceMatrix.needsUpdate = true;
