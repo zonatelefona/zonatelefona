@@ -211,7 +211,7 @@ const wallMat = new THREE.ShaderMaterial({ fog: true,
     uniform float uC,uT; uniform vec3 uCam; varying vec3 vW; ${CRACK}
     void main(){ vec2 p=vW.xy;
       vec2 d0=p-vec2(0.,.3); float r=length(d0), a=atan(d0.y,d0.x);
-      float spread=uC*6.5;                                              // crack front radius
+      float spread=.35+uC*6.2;                                          // crack front radius (first hairline already lit)
       float on=smoothstep(spread,spread-1.4,r);
       float ang=a*(15./6.2831853)+sin(r*1.1+a*3.)*.22+sin(r*3.7)*.05;  // 15 wobbling radial cracks
       float rd=abs(fract(ang+.5)-.5)*6.2831853/15.*r;
@@ -223,8 +223,9 @@ const wallMat = new THREE.ShaderMaterial({ fog: true,
       float c1=rd;
       float flick=.8+.2*sin(uT*40.+r*6.);
       // brushed black metal: dark base + soft orange reflection of the light behind the camera
-      vec3 V=normalize(uCam-vW); float spec=pow(max(0.,1.-length(p-vec2(-1.,2.))/14.),3.);
-      vec3 base=vec3(.012)+vec3(.05,.028,.018)*spec + vec3(.006)*sin(p.y*90.+sin(p.x*3.)*2.);
+      vec3 V=normalize(uCam-vW); vec2 sp=p-uCam.xy*.6-vec2(-.6,1.2); float spec=pow(max(0.,1.-length(sp*vec2(1.,.55))/9.),3.);
+      float brushed=.5+.5*sin(p.y*140.+sin(p.x*2.3)*3.); float sheen=exp(-pow((p.x*.35+p.y*.25)-(uT-10.)*.9+2.,2.)*1.6);   // travelling sheen across the brushed metal
+      vec3 base=vec3(.014)+vec3(.09,.045,.022)*spec*(.75+.25*brushed) + vec3(.16,.075,.03)*sheen*(.6+.4*brushed)*smoothstep(10.,10.6,uT);
       vec3 glow=vec3(1.,.42,.13)*line*(1.1+1.8*uC)*flick + vec3(1.,.3,.08)*on*.06*exp(-r*.6);
       gl_FragColor=vec4(base+glow,1.);
       #include <tonemapping_fragment>
@@ -239,6 +240,7 @@ const wallFrame = new THREE.Group(); world.add(wallFrame);
   add((big - HOLE.w) / 2, HOLE.h, HOLE.w / 2 + (big - HOLE.w) / 4, 0); add((big - HOLE.w) / 2, HOLE.h, -HOLE.w / 2 - (big - HOLE.w) / 4, 0);
 }
 const wallCentre = new THREE.Mesh(new THREE.PlaneGeometry(HOLE.w, HOLE.h), wallMat); wallCentre.position.set(0, 0, WALLZ); world.add(wallCentre);
+const dust3 = dustCloud(1800, 0, 0, WALLZ + 6, 9, 12, 12, 2.2, 13); world.add(dust3);
 const shards = new THREE.Group(); world.add(shards);
 { // jittered triangulation of the centre → thin shards with their own fly-out vectors
   const NX = 9, NY = 14, pts = [];
@@ -267,12 +269,12 @@ const endLine = new THREE.Mesh(new THREE.PlaneGeometry(2.2, .018), new THREE.Sha
 world.add(endLine);
 const backGlow = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), new THREE.ShaderMaterial({ ...ADD, fog: false, uniforms: { uA: { value: 0 }, uT: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
-  fragmentShader: `uniform float uA,uT; varying vec2 vUv; void main(){ vec2 q=(vUv-.5)*vec2(1.5,1.); float r=length(q); float k=exp(-r*r*16.)*.9+exp(-r*r*60.)*.6;
+  fragmentShader: `uniform float uA,uT; varying vec2 vUv; void main(){ vec2 q=(vUv-.5)*vec2(1.5,1.); float r=length(q); float k=exp(-r*r*16.)*1.05;
     k*=.92+.08*sin(uT*2.1); gl_FragColor=vec4(vec3(1.,.42,.15)*k*uA*.32,1.); }` }));
 backGlow.position.set(0, .7, BFZ - 6); backGlow.scale.set(.3, .32, 1); world.add(backGlow);
 const bfSmoke = smokeBank(12, 0, -2.4, BFZ + 1, 7, 4, 4.5, 9); world.add(bfSmoke);
 const dust2 = dustCloud(2200, 0, 0, BFZ + 4, 12, 14, 12, 2.0, 7); world.add(dust2);
-const convBeams = [beam(30, .04, 1.4), beam(30, .04, 1.4), beam(30, .04, 1.2), beam(30, .04, 1.2)];
+const convBeams = [beam(13.5, .04, .9), beam(13.5, .04, .9), beam(13.2, .04, .8), beam(13.2, .04, .8)];   // end at the phone, never past it
 convBeams.forEach((b, i) => { b.position.set([-7, 7, -4, 4][i], [13, 13, -12, -12][i], BFZ + 6); b.lookAt(0, .3, BFZ + 7); b.rotateX(-Math.PI / 2); world.add(b); });
 
 // ================================================================== camera journey (one continuous move)
@@ -280,7 +282,7 @@ const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 let path, ZX = -1.8, ZY = 1.0;                       // set in boot() once the Z position is known
 const S1END = () => new THREE.Vector3(ZX, ZY - .3, 8.2);
 function buildPath() { path = new THREE.CatmullRomCurve3([   // S1 end → orbit out to read the whole logo → rush past the monolith's edge → phone field
-  S1END(), new THREE.Vector3(-6.0, 1.4, 13.5), new THREE.Vector3(0, .7, 19.5), new THREE.Vector3(6.4, .4, 8.5),
+  S1END(), new THREE.Vector3(-6.5, 1.5, 15.5), new THREE.Vector3(0, .6, 22.5), new THREE.Vector3(6.6, .4, 9.5),
   new THREE.Vector3(4.3, .25, -1.6), new THREE.Vector3(2.0, .25, -7.5)], false, 'catmullrom', .5); }
 function cameraAt(t) {
   let shake = 0;
@@ -290,7 +292,7 @@ function cameraAt(t) {
   } else if (t < T.s3 + .4) {                          // S2: orbit around the monolith, then slip past its edge
     const k = .4 * eInOutSine(prog(t, T.s2, 5.2)) + .6 * eInOutCubic(prog(t, T.pass - .1, T.s3 + .4));
     path.getPoint(k, camPos); const lk = eInOutCubic(prog(t, T.pass, T.s3 + .35)), lz = eInOutSine(prog(t, T.s2, T.s2 + 1.2));
-    camLook.set(lerp(lerp(ZX, 0, lz), .3, lk), lerp(lerp(ZY - .2, .35, lz), .2, lk), lerp(0, -22, lk));
+    camLook.set(lerp(lerp(ZX, 0, lz), .3, lk), lerp(lerp(ZY - .2, .45, lz), .2, lk), lerp(0, -22, lk));
   } else if (t < T.s4) {                               // S3: smooth dolly through the phones
     const u = eInOutSine(prog(t, T.s3 + .4, T.s4)); camPos.set(lerp(2.0, -.4, u) + noise1(t * .6) * .05, lerp(.25, .15, u), lerp(-7.5, -13.5, u)); camLook.set(lerp(.3, 0, u), .1, -22);
   } else if (t < T.s5) {                               // S4: everything slows down, towards the wall … then through the hole
@@ -356,7 +358,7 @@ async function setTime(t) {
     cards.forEach((c, i) => {
       const r = eOutCubic(prog(t, T.rise + c.d, T.rise + c.d + 1.4)), m = c.mesh;
       m.position.set(c.x, lerp(c.y - 6.5, c.y, r) + Math.sin(dt * .7 + i) * .05 - sink * 4, c.z); m.rotation.set(0, c.ry + Math.sin(dt * .4 + i * 2) * .05, 0);
-      const u = m.material.uniforms; u.uA.value = r * (1 - sink); u.uSweep.value = lerp(-.4, 1.4, prog(t, T.rise + c.d + .6, T.rise + c.d + 2.2)); u.uSweepA.value = .9; u.uRim.value = .8 * r;
+      const u = m.material.uniforms; u.uA.value = r * (1 - sink); u.uSweep.value = lerp(-.4, 1.4, prog(t, T.rise + c.d + .6, T.rise + c.d + 2.2)); u.uSweepA.value = 1.3; u.uRim.value = 1.6 * r;
     });
     const r = eOutCubic(prog(t, T.rise + .15, T.rise + 1.6));
     hero.g.position.set(.2, lerp(-6.8, .15, r) + Math.sin(dt * .8) * .04 - sink * 4, -21.5);
@@ -368,7 +370,8 @@ async function setTime(t) {
   // ---------- S4: wall, cracks, fracture
   const wallOn = t > T.s4 - .5 && t < T.s5 + .6;
   wallFrame.visible = wallOn; wallCentre.visible = wallOn && t < T.fracture; shards.visible = wallOn && t >= T.fracture; sparks.visible = wallOn && t >= T.fracture - .02;
-  wallMat.uniforms.uC.value = eInCubic(prog(t, T.cracks, T.fracture)) * 1.0 + (t >= T.fracture ? 1 : 0) * .4; wallMat.uniforms.uT.value = t; wallMat.uniforms.uCam.value.copy(camera.position);
+  wallMat.uniforms.uC.value = (t < T.cracks - .2 ? -1 : 0) + eInCubic(prog(t, T.cracks - .2, T.fracture)) + (t >= T.fracture ? 1 : 0) * .4;
+  dust3.visible = wallOn; dust3.material.uniforms.uA.value = eOutCubic(prog(t, T.s4 - .3, T.s4 + .8)) * (1 - prog(t, T.fracture + .3, T.s5 + .4)); dust3.material.uniforms.uT.value = t * .45; wallMat.uniforms.uT.value = t; wallMat.uniforms.uCam.value.copy(camera.position);
   if (wallOn && t >= T.fracture) {
     const tt = t - T.fracture;
     shards.children.forEach(m => { const u = m.userData, s = Math.max(0, tt - u.delay), slow = s * (.55 + .45 * clamp(s / .6));
@@ -397,7 +400,7 @@ async function setTime(t) {
   backGlow.material.uniforms.uT.value = t;
   bfSmoke.visible = bfOn; bfSmoke.userData.update(dt, bfOn ? eOutCubic(prog(t, T.bf, T.bf + 1.5)) * (1 - prog(t, T.s7, T.s7 + 1.5)) : 0);
   dust2.visible = bfOn; dust2.material.uniforms.uA.value = bfOn ? eOutCubic(prog(t, T.bf, T.bf + 1.5)) * (1 - prog(t, T.s7, T.s7 + 1.5)) : 0; dust2.material.uniforms.uT.value = dt * .6;
-  convBeams.forEach((b, i) => { b.material.uniforms.uA.value = eOutCubic(prog(t, T.phone + i * .12, T.phone + 1 + i * .12)) * (1 - prog(t, T.s7, T.s7 + 1.2)) * .8; b.material.uniforms.uT.value = t; });
+  convBeams.forEach((b, i) => { b.material.uniforms.uA.value = eOutCubic(prog(t, T.phone + i * .12, T.phone + 1 + i * .12)) * (1 - prog(t, T.s7, T.s7 + 1.2)) * .55; b.material.uniforms.uT.value = t; });
   if (bfOn) {
     // BLACK FRIDAY: letters punch towards the camera on the reveal, then hold with breathing orange edges; in the hero shot the faces glow orange
     setLetters(bfBlack, T.bf - .05, t, { dur: .7, st: .045, from: 'push', amt: 1.4 });
@@ -435,7 +438,7 @@ async function setTime(t) {
       zt.userData.side.emissiveIntensity = (.75 + .2 * Math.sin(t * 2)) * eOutCubic(prog(t, T.logo, T.logo + .6)) * (1 - .4 * eInOutCubic(prog(t, T.end - .9, T.end)));
     } else zt.scale.setScalar(zt.userData.fit);
     const el = eOutCubic(prog(t, T.s7 + 1.0, T.s7 + 1.8)); endLine.position.set(0, -.18, BFZ + 7.05); endLine.material.uniforms.uA.value = el; endLine.material.uniforms.uW.value = el;
-    rim.position.set(0, 1, BFZ + 4); rim.intensity = 50 * pr * (1 - prog(t, T.s7, T.s7 + 1));
+    rim.position.set(0, -.2, BFZ + 3.2); rim.intensity = 28 * pr * (1 - prog(t, T.s7, T.s7 + 1));   // behind the phone, below the type
     grade.uniforms.uFlash.value += .3 * (t > T.bf ? Math.exp(-(t - T.bf) / .2) : 0) + .22 * (t > T.uskoro ? Math.exp(-(t - T.uskoro) / .18) : 0);
   }
   composer.render();
@@ -452,11 +455,11 @@ async function boot() {
   logoZ = text3d('ZONA', { size: 1.55, depth: .34, bevel: .04 }); logoZ.position.set(0, 1.0, .02 + .17); world.add(logoZ);
   logoT = text3d('TELEFONA', { size: .44, depth: .14, bevel: .018, tracking: .42, face: chrome(), side: edgeOrange() }); logoT.position.set(0, -.55, .02 + .07); world.add(logoT);
   // phones (real stills) floating in the field
-  hero = new Phone(tFront, tBack, 3.2);
+  hero = new Phone(tFront, tBack, 2.8);
   cards = [
-    { img: iS26, tex: tS26, h: 3.0, x: -2.7, y: .55, z: -25.5, ry: .22, d: .35 },
-    { img: iAir, tex: tAir, h: 3.0, x: 2.9, y: -.25, z: -26.5, ry: -.18, d: .55 },
-    { img: iSil, tex: tSil, h: 2.7, x: -1.9, y: -.9, z: -17.5, ry: .3, d: .1 },
+    { img: iS26, tex: tS26, h: 2.9, x: -1.75, y: .5, z: -25.0, ry: .2, d: .35 },
+    { img: iAir, tex: tAir, h: 2.9, x: 1.85, y: -.2, z: -25.8, ry: -.16, d: .55 },
+    { img: iSil, tex: tSil, h: 2.5, x: -1.45, y: -.95, z: -18.2, ry: .26, d: .1 },
   ].map(c => ({ ...c, mesh: card(c.tex, c.img, c.h) }));
   streaks = new THREE.Group(); world.add(streaks);
   for (let i = 0; i < 9; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(5 + hash(i) * 6, .025 + hash(i + 1) * .03), new THREE.ShaderMaterial({ ...ADD, fog: false, uniforms: { uA: { value: 0 } },
