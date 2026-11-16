@@ -11,5 +11,5 @@ GAIN=$(python3 -c "print(round(-14.0 - float('$I'), 2))")
 ffmpeg -y -framerate 120 -i "$OUT/frames/%05d.jpg" -i "$OUT/audio.wav" -map 0:v -map 1:a \
   -vf "tmix=frames=2:weights='1 1',select='not(mod(n\,2))',setpts=N/(60*TB),format=yuv420p" -r 60 \
   -c:v libx264 -preset slow -crf 14 -profile:v high -level 4.2 -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \
-  -af "volume=${GAIN}dB,alimiter=limit=0.891:attack=2:release=60:level=false" -c:a aac -b:a 320k -ar 48000 -t "$END" -movflags +faststart \
+  -af "volume=$(python3 -c "print(round(float('$GAIN')+.5,2))")dB,alimiter=limit=0.72:attack=1:release=60:level=false" -c:a aac -b:a 320k -ar 48000 -t "$END" -movflags +faststart \
   "$OUT/ZONA_TELEFONA_BLACK_FRIDAY_1080x1920_60fps.mp4"

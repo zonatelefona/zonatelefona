@@ -390,7 +390,8 @@ async function setTime(t) {
     sparkGeo.attributes.position.needsUpdate = true; sparkGeo.attributes.color.needsUpdate = true;
   }
   const fl = t >= T.fracture ? Math.exp(-(t - T.fracture) / .22) : 0;
-  flare.visible = wallOn; flare.material.opacity = .8 * fl + .25 * eInCubic(prog(t, T.cracks + .8, T.fracture)); flare.scale.setScalar(1.5 + 9 * fl + 2 * eInCubic(prog(t, T.cracks, T.fracture)));
+  const pre = eInCubic(prog(t, T.cracks + .8, T.fracture)) * (t < T.fracture ? 1 : Math.exp(-(t - T.fracture) / .15));
+  flare.visible = wallOn && camera.position.z > WALLZ + 1.2; flare.material.opacity = (.8 * fl + .25 * pre) * clamp((camera.position.z - (WALLZ + 1.2)) / 2.5); flare.scale.setScalar(1.5 + 9 * fl + 2 * pre);
   grade.uniforms.uFlash.value = .45 * fl;
   // ---------- S5/S6: BLACK FRIDAY world
   const bfOn = t > T.fracture - .3;
